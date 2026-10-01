@@ -43,6 +43,7 @@ def create_app(config_class=None):
     # proper database migrations; create_all is fine while the schema is young.)
     with app.app_context():
         db.create_all()
+        _ensure_columns(app)
 
     # Crash recovery: scans left "running" by a previous process must not
     # stay stuck forever — mark them interrupted, honestly.
@@ -50,3 +51,23 @@ def create_app(config_class=None):
     jobs.recover_interrupted(app)
 
     return app
+
+
+def _ensure_columns(app):
+    """Add columns that create_all() can't: it creates missing TABLES but
+    never alters existing ones, so a dev database from an earlier milestone
+    would otherwise be missing new columns (and crash). Each entry is
+    (table, column, sqlite_type). Runs on every startup; cheap and idempotent.
+    """
+    new_columns = [
+        ("scans", "risk_score", "INTEGER NOT NULL DEFAULT 0"),
+    ]
+    with db.engine.connect() as conn:
+        for table, column, ctype in new_columns:
+            existing = [r[1] for r in
+                        conn.exec_driver_sql(f"PRAGMA table_info({table})")]
+            if column not in existing:
+                conn.exec_driver_sql(
+                    f"ALTER TABLE {table} ADD COLUMN {column} {ctype}")
+                app.logger.info("schema: added column %s.%s", table, column)
+        conn.commit()

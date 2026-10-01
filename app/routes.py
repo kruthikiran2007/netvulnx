@@ -15,7 +15,9 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, jsonify)
 
 from app import db
-from app.models import Scan, Asset, Port
+from app.models import Scan, Asset, Port, Finding
+from rules import SEVERITY_RANK
+from rules.scoring import FORMULA_TEXT
 from scanner import jobs
 from scanner.targets import parse_target, parse_ports, TargetError
 from config import Config
@@ -171,4 +173,11 @@ def scan_status(scan_id):
 @bp.get("/scans/<int:scan_id>")
 def scan_detail(scan_id):
     scan = Scan.query.get_or_404(scan_id)
-    return render_template("scan_detail.html", scan=scan)
+    findings = (Finding.query.filter_by(scan_id=scan_id).all())
+    # Most severe first; stable order within a severity.
+    findings.sort(key=lambda f: (SEVERITY_RANK.get(f.severity, 99), f.id))
+    sev_counts = {}
+    for f in findings:
+        sev_counts[f.severity] = sev_counts.get(f.severity, 0) + 1
+    return render_template("scan_detail.html", scan=scan, findings=findings,
+                           sev_counts=sev_counts, formula_text=FORMULA_TEXT)

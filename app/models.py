@@ -46,6 +46,11 @@ class Scan(db.Model):
     current_stage = db.Column(db.String(80), default="")
     error = db.Column(db.Text)
 
+    # Aggregate risk score (Milestone 4): sum of severity weights across the
+    # scan's findings. See rules/scoring.py for the formula. 0 does not mean
+    # "secure" — it means no rule matched.
+    risk_score = db.Column(db.Integer, nullable=False, default=0)
+
     # One scan has many assets; deleting a scan deletes its assets too.
     assets = db.relationship("Asset", backref="scan", cascade="all, delete-orphan")
 
@@ -184,3 +189,34 @@ class Port(db.Model):
         "ServiceCheck",
         backref=db.backref("port", single_parent=True),
         cascade="all, delete-orphan")
+    findings = db.relationship("Finding", backref="port",
+                               cascade="all, delete-orphan")
+
+
+class Finding(db.Model):
+    """One vulnerability / hardening finding produced by the rule engine.
+
+    A finding exists ONLY because a rule matched measured observations.
+    Rules never invent data: `evidence` holds the facts the rule saw,
+    `confidence` says how sure the measurement is, and the explanatory
+    fields (description/impact/remediation/references) are fixed text
+    written by the rule's author — not generated per scan.
+    """
+    __tablename__ = "findings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    scan_id = db.Column(db.Integer, db.ForeignKey("scans.id"), nullable=False)
+    asset_id = db.Column(db.Integer, db.ForeignKey("assets.id"), nullable=False)
+    port_id = db.Column(db.Integer, db.ForeignKey("ports.id"), nullable=True)
+
+    rule_id = db.Column(db.String(60), nullable=False)  # e.g. "tls-cert-expired"
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    severity = db.Column(db.String(10), nullable=False)    # critical/high/medium/low/info
+    confidence = db.Column(db.String(15), nullable=False)  # confirmed/likely/potential/informational
+    evidence = db.Column(db.Text)        # JSON dict of measured facts
+    impact = db.Column(db.Text)          # why it matters
+    remediation = db.Column(db.Text)     # how to fix it
+    references = db.Column(db.Text)      # JSON list of documentation URLs
+
+    created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)

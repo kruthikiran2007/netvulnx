@@ -4,24 +4,9 @@ Pipeline per host:
     1. Host discovery  (quick "is anything there?" via reachability)
     2. Port scan       (bounded thread-pool connect scan)
     3. Fingerprinting  (banner grab + protocol parsers on open ports)
-    4. Storage         (Asset + Port rows, real progress updates)
-
-Runs on a background thread (see scanner/jobs.py). Progress is REAL:
-hosts completed / total hosts, with per-host detail in current_stage.
-
-Safety properties:
-  - checks the cancel event between every phase and chunk
-  - never leaves a scan stuck in "running" (try/except/finally)
-  - commits per host, so a crash keeps partial results instead of nothing
-"""
-"""Scan orchestrator — runs the full assessment pipeline for one scan.
-
-Pipeline per host:
-    1. Host discovery  (quick "is anything there?" via reachability)
-    2. Port scan       (bounded thread-pool connect scan)
-    3. Fingerprinting  (banner grab + protocol parsers on open ports)
     3b. Service analysis (TLS / HTTP / DNS / SMTP / FTP — read-only)
-    4. Storage         (Asset + Port + analysis rows, real progress updates)
+    3c. Rule evaluation (deterministic rules turn observations into findings)
+    4. Storage         (Asset + Port + analysis rows + findings, real progress)
 
 Runs on a background thread (see scanner/jobs.py). Progress is REAL:
 hosts completed / total hosts, with per-host detail in current_stage.
@@ -30,12 +15,16 @@ Safety properties:
   - checks the cancel event between every phase and chunk
   - never leaves a scan stuck in "running" (try/except/finally)
   - commits per host, so a crash keeps partial results instead of nothing
+  - rule evaluation is pure matching: a rule can never invent a finding,
+    and a buggy rule is skipped instead of crashing the scan
 """
 import json
 from datetime import datetime, timezone
 
 from app import db
-from app.models import Scan, Asset, Port, TlsInfo, HttpInfo, ServiceCheck
+from app.models import Scan, Asset, Port, TlsInfo, HttpInfo, ServiceCheck, Finding
+from rules import evaluate as evaluate_rules
+from rules.scoring import score_findings
 from scanner import jobs, reachability, portscan, fingerprint
 from scanner import tlscheck, httpcheck, servicecheck
 from scanner.targets import parse_target, parse_ports
@@ -179,29 +168,38 @@ def _analyze_service(scan, ip: str, port_num: int, service: str, port_row: Port,
     return True
 
 
-def run_scan(app, scan_id: int, cancel_event):
-    """Thread entry point. Wraps _run with app context + guaranteed cleanup."""
-    with app.app_context():
-        try:
-            _run(scan_id, cancel_event)
-        except Exception as exc:  # last resort: record failure, never hang
-            scan = db.session.get(Scan, scan_id)
-            if scan is not None and scan.status == "running":
-                scan.status = "failed"
-                scan.error = f"{type(exc).__name__}: {exc}"
-                db.session.commit()
-        finally:
-            jobs._finish_job(scan_id)
+def _evaluate_rules(scan, asset, port_row):
+    """Phase 3c: run the deterministic rule engine for one port.
 
-
-def _cancelled(scan, cancel_event) -> bool:
-    if cancel_event.is_set():
-        scan.status = "cancelled"
-        scan.current_stage = "Cancelled by user"
-        scan.completed_at = _utcnow()
-        db.session.commit()
-        return True
-    return False
+    The context is built only from measured observations (Port + TlsInfo +
+    HttpInfo + ServiceCheck rows). Each matching rule contributes one Finding
+    with its evidence; non-matching rules contribute nothing — this is where
+    "no invented findings" is enforced.
+    """
+    ctx = {
+        "target": scan.target_raw,
+        "scan": scan,
+        "asset": asset,
+        "port": port_row,
+        "tls": port_row.tls_info,
+        "http": port_row.http_info,
+        "checks": {c.check_type: c for c in port_row.service_checks},
+    }
+    for rule, evidence in evaluate_rules(ctx):
+        db.session.add(Finding(
+            scan_id=scan.id,
+            asset_id=asset.id,
+            port_id=port_row.id,
+            rule_id=rule["id"],
+            title=rule["title"],
+            description=rule["description"],
+            severity=rule["severity"],
+            confidence=rule["confidence"],
+            evidence=json.dumps(evidence, default=str),
+            impact=rule["impact"],
+            remediation=rule["remediation"],
+            references=json.dumps(rule.get("references", [])),
+        ))
 
 
 def _run(scan_id: int, cancel_event):
@@ -303,6 +301,13 @@ def _run(scan_id: int, cancel_event):
                                     port_row, cancel_event):
                 _cancelled(scan, cancel_event)
                 return
+
+            # ---- Phase 3c: rule engine turns observations into findings ----
+            if _cancelled(scan, cancel_event):
+                return
+            scan.current_stage = (f"Rule evaluation {ip}:{port} "
+                                  f"({j + 1}/{len(open_ports)})")
+            _evaluate_rules(scan, asset, port_row)
             db.session.commit()
 
         # ---- Phase 4: commit this host, advance real progress ----
@@ -313,4 +318,8 @@ def _run(scan_id: int, cancel_event):
     scan.status = "completed"
     scan.current_stage = "Done"
     scan.completed_at = _utcnow()
+    # Aggregate risk score: a simple sum of severity weights — see
+    # rules/scoring.py. Informational findings add nothing.
+    scan.risk_score = score_findings(
+        Finding.query.filter_by(scan_id=scan.id).all())
     db.session.commit()

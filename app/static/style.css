@@ -169,3 +169,31 @@ table.kv td { padding: 5px 0; font-size: 0.9em; }
 .analysis details summary { cursor: pointer; }
 .analysis pre { background: var(--panel-2); border: 1px solid var(--border);
   border-radius: 6px; padding: 8px 12px; font-size: 0.8em; overflow-x: auto; max-height: 220px; }
+
+/* Findings (Milestone 4) */
+.finding { background: var(--panel); border: 1px solid var(--border);
+  border-left: 4px solid var(--muted); border-radius: 8px;
+  padding: 12px 18px; margin: 14px 0; }
+.finding.sev-critical { border-left-color: #c0392b; }
+.finding.sev-high { border-left-color: var(--red); }
+.finding.sev-medium { border-left-color: var(--amber); }
+.finding.sev-low { border-left-color: var(--accent); }
+.finding.sev-info { border-left-color: var(--muted); }
+.finding-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 4px; }
+.finding-head strong { font-size: 1.05em; }
+.finding h4 { margin: 14px 0 6px; color: var(--accent); font-size: 0.95em;
+  text-transform: uppercase; letter-spacing: 0.04em; }
+.badge.sev-critical { color: #e74c3c; border-color: #e74c3c; }
+.badge.sev-high { color: var(--red); border-color: var(--red); }
+.badge.sev-medium { color: var(--amber); border-color: var(--amber); }
+.badge.sev-low { color: var(--accent); border-color: var(--accent); }
+.badge.sev-info { color: var(--muted); border-color: var(--muted); }
+.conf-badge { display: inline-block; font-size: 0.8em; color: var(--muted);
+  border: 1px dashed var(--muted); border-radius: 999px; padding: 1px 10px; }
+dl.evidence { display: grid; grid-template-columns: 160px 1fr; gap: 4px 12px;
+  margin: 6px 0; font-size: 0.9em; }
+dl.evidence dt { color: var(--muted); text-transform: capitalize; }
+dl.evidence dd { margin: 0; }
+ul.refs { margin: 6px 0; padding-left: 20px; font-size: 0.9em; }
+.small { font-size: 0.85em; }

@@ -4,13 +4,14 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
-> **Milestone 3 status:** service analysis is live. After fingerprinting,
-> authorized scans now run read-only TLS analysis (version, cipher,
-> certificate facts, old-protocol probes), HTTP analysis (redirect chains,
-> security-header checklist, page clues), and safe service checks
-> (DNS version, SMTP EHLO/STARTTLS, FTP anonymous login) — all stored as
-> measured observations with evidence. The rule engine, risk scoring
-> and reporting arrive in later milestones.
+> **Milestone 4 status:** the rule engine is live. After service analysis,
+> a deterministic engine matches 15 rules against the measured observations
+> (expired/self-signed/mismatched certs, obsolete TLS, weak ciphers, missing
+> security headers, directory listings, anonymous FTP, and more). Each match
+> becomes a finding with evidence, confidence, impact, remediation, and
+> references — plus an explainable risk score. Rules never invent findings:
+> no match, no finding. Reporting and scan comparison arrive in later
+> milestones.
 
 ## Safety first
 
@@ -66,7 +67,7 @@ netvulnx/
 │   ├── fingerprint.py     # banner grab + service ID with confidence — Phase 3
 │   ├── engine.py          # scan orchestrator (background worker) — Phase 4
 │   └── jobs.py            # job start / cancel / crash recovery
-├── rules/                 # vulnerability rule engine (Milestone 4 — planned)
+├── rules/                 # deterministic rule engine (Milestone 4)
 ├── tests/                 # pytest unit tests
 └── docs/
     └── ARCHITECTURE.md    # how the pieces fit together
@@ -82,7 +83,7 @@ netvulnx/
 1. **Foundation & safety** ✅ — scaffold, DB, UI shell, authorization gate, reachability
 2. **Port scanning + fingerprinting** ✅ — real TCP connect scan, banner grabbing, service ID with confidence, background jobs, scan profiles
 3. **HTTP/HTTPS + TLS analysis** ✅ — TLS handshake/cert/protocol analysis, HTTP redirect + security-header checks, safe DNS/SMTP/FTP service checks, TLS detection in fingerprinting
-4. **Rule engine + risk scoring + evidence** — the custom detection differentiator
+4. **Rule engine + risk scoring + evidence** ✅ — 15 deterministic rules turn observations into findings with evidence/confidence/impact/remediation; explainable risk score; no invented findings
 5. **Dashboard, assets, attack-surface view** — all from real data
 6. **Reports, remediation tracking, scan comparison**
 7. **Testing, hardening, documentation**

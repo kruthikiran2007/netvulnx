@@ -1,4 +1,4 @@
-# NetVulnX Architecture (Milestone 3)
+# NetVulnX Architecture (Milestone 4)
 
 ## The big picture
 
@@ -107,9 +107,50 @@ holding measured facts plus deterministic derived flags (expired,
 self-signed). **Risk judgments are deliberately absent**: the Milestone 4
 rule engine will turn these observations into findings.
 
-## What's next (Milestone 4)
-The rule engine, risk scoring, and reporting. Milestone 3 stored only
-measured observations (TlsInfo / HttpInfo / ServiceCheck rows) — Milestone 4
-turns those deterministic facts into findings with severity, evidence,
-confidence, and remediation guidance. No AI invents findings; rules match
-on the stored observations.
+## What's next (Milestone 5)
+Dashboard polish, the asset inventory view, and attack-surface visualization —
+all rendered from real database rows. Then Milestone 6: HTML reports,
+remediation tracking, and scan comparison.
+
+## Milestone 4: rule engine + risk scoring (what's new)
+
+After service analysis, the engine runs **Phase 3c — deterministic rule
+evaluation** per open port (`_evaluate_rules` in `scanner/engine.py`):
+
+- **`rules/`** — 15 rules in three modules (`tls_rules.py`, `http_rules.py`,
+  `service_rules.py`). Each rule is a dict: stable `id`, `title`,
+  `severity` (critical/high/medium/low/info), `confidence`
+  (confirmed/likely/potential/informational), fixed explanatory text
+  (`description`/`impact`/`remediation`/`references`), and a pure
+  `match(ctx)` function. The context is built **only** from measured rows
+  (Port + TlsInfo + HttpInfo + ServiceCheck) — rules do no I/O.
+- **No invented findings.** `match` returns an evidence dict when the bad
+  condition holds, `None` otherwise. No match → no `Finding` row, ever. An
+  open port alone matches no rule, by design.
+- **Two independent axes.** Severity = impact *if abused*; confidence = how
+  sure the *measurement* is. A finding can be high-severity/likely or
+  low-severity/confirmed — the UI shows both badges.
+- **Bug isolation.** `evaluate()` runs each rule inside try/except: one
+  broken rule is skipped, never crashes a scan. (This bit us during
+  development — a rule touched `row.detail` instead of the real `details`
+  column and silently never fired. The regression test
+  `test_rules_against_real_model_attributes` runs every rule against real
+  model instances so it can't happen again.)
+- **`Finding` model** — `rule_id`, title, severity, confidence, evidence
+  (JSON of measured values), impact, remediation, references (JSON list),
+  timestamp. Linked to scan/asset/port; cascade-deleted with the scan.
+- **Risk scoring** (`rules/scoring.py`) — a deliberately simple weighted
+  sum: critical×10 + high×5 + medium×3 + low×1 (+info×0), stored on
+  `Scan.risk_score` at completion. The formula is printed next to every
+  score in the UI: a triage aid, not a security rating. 0 means "no rule
+  matched", not "secure".
+- **Schema migration helper** — `create_all()` creates missing tables but
+  never adds columns, so `app/__init__.py` now runs `_ensure_columns()`
+  (PRAGMA table_info + ALTER TABLE) for columns added to existing tables.
+  Idempotent, runs every startup. (Proper Alembic migrations are still a
+  later milestone.)
+- **UI** — scan detail page gained a Findings section: risk-score card with
+  the formula, severity counts, and one card per finding (severity +
+  confidence badges, where, evidence table, impact, remediation,
+  references). The shared scan table gained a Risk column. Full authoring
+  guide: `docs/RULE_DEVELOPMENT.md`.
