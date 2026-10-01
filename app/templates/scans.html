@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Scans · NetVulnX{% endblock %}
+{% block content %}
+<h1>Scans</h1>
+<p><a class="btn primary" href="{{ url_for('main.new_scan_form') }}">+ New scan</a></p>
+{% if scans %}
+  {% include "scan_table.html" %}
+{% else %}
+  <p class="muted">No scans yet.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · NetVulnX{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="muted">
+  Every number below comes from the scan database — nothing is hardcoded.
+  Findings, risk scoring and charts arrive in Milestone 4.
+</p>
+
+<div class="cards">
+  <div class="card">
+    <div class="stat">{{ total_scans }}</div>
+    <div class="label">Total scans</div>
+  </div>
+  <div class="card">
+    <div class="stat">{{ total_assets }}</div>
+    <div class="label">Assets discovered</div>
+  </div>
+  <div class="card">
+    <div class="stat">{{ completed_scans }}</div>
+    <div class="label">Completed scans</div>
+  </div>
+</div>
+
+<h2>Recent scans</h2>
+{% if recent_scans %}
+  {% set scans = recent_scans %}
+  {% include "scan_table.html" %}
+{% else %}
+  <p class="muted">No scans yet. <a href="{{ url_for('main.new_scan_form') }}">Create your first scan</a> — try <code>127.0.0.1</code>.</p>
+{% endif %}
+{% endblock %}

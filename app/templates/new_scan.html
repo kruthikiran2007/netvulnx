@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}New scan · NetVulnX{% endblock %}
+{% block content %}
+<h1>New scan</h1>
+
+<div class="notice">
+  <strong>Scope &amp; authorization.</strong>
+  NetVulnX only scans <code>127.0.0.1</code>, <code>::1</code> and private
+  lab/LAN addresses (<code>10.x</code>, <code>172.16–31.x</code>,
+  <code>192.168.x</code>) by default. You will confirm authorization
+  on the next screen before anything touches the network.
+</div>
+
+<form method="post" action="{{ url_for('main.new_scan_submit') }}" class="form">
+  <label>
+    Scan name
+    <input type="text" name="name" value="{{ name or '' }}" maxlength="120"
+           placeholder="e.g. Lab VM baseline">
+  </label>
+
+  <label>
+    Target
+    <input type="text" name="target" value="{{ target or '' }}" required
+           placeholder="127.0.0.1  or  192.168.56.0/24  or  mylab.local">
+    <span class="hint">An IP address, a CIDR range (max /24), or a hostname.</span>
+  </label>
+
+  <label>
+    Ports to check
+    <input type="text" name="ports" value="{{ ports or default_ports }}" required>
+    <span class="hint">Comma-separated and/or ranges, e.g. <code>80,443</code> or <code>20-25,80</code>. Max 32 ports in Milestone 1.</span>
+  </label>
+
+  <button class="btn primary" type="submit">Continue → review &amp; authorize</button>
+</form>
+{% endblock %}

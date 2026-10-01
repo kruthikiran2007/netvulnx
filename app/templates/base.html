@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}NetVulnX{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">NetVulnX <span class="tag">milestone 1</span></div>
+    <nav>
+      <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('main.scan_list') }}">Scans</a>
+      <a href="{{ url_for('main.new_scan_form') }}" class="btn">+ New scan</a>
+    </nav>
+  </header>
+
+  <main>
+    {# Flash messages: success/error/info notices set by the routes #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    NetVulnX — authorized assessments only.
+    Scan only systems you own or have explicit permission to test.
+  </footer>
+</body>
+</html>

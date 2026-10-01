@@ -1,0 +1,12 @@
+# Python virtual environment (created with: python3 -m venv venv)
+venv/
+
+# SQLite database file (created automatically on first run)
+*.db
+
+# Python bytecode caches
+__pycache__/
+*.pyc
+
+# Test artifacts
+.pytest_cache/

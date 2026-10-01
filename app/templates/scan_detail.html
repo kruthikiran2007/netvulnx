@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Scan #{{ scan.id }} · NetVulnX{% endblock %}
+{% block content %}
+<h1>{{ scan.name }}</h1>
+
+<div class="cards">
+  <div class="card">
+    <div class="label">Target</div>
+    <div class="value"><code>{{ scan.target_raw }}</code> ({{ scan.target_type }})</div>
+  </div>
+  <div class="card">
+    <div class="label">Status</div>
+    <div class="value"><span class="badge {{ scan.status }}">{{ scan.status.replace("_", " ") }}</span></div>
+  </div>
+  <div class="card">
+    <div class="label">Authorization</div>
+    <div class="value">
+      {% if scan.authorized %}
+        Confirmed {{ scan.authorized_at.strftime("%Y-%m-%d %H:%M") if scan.authorized_at else "" }}
+      {% else %}
+        <span class="muted">Not authorized</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if scan.status == "running" %}
+  <h2>Progress</h2>
+  <div class="progress"><div class="bar" style="width: {{ scan.progress }}%"></div></div>
+  <p class="muted">{{ scan.current_stage }} — {{ scan.progress }}%</p>
+{% endif %}
+
+{% if scan.error %}
+  <div class="flash error">{{ scan.error }}</div>
+{% endif %}
+
+<h2>Assets ({{ scan.assets|length }})</h2>
+{% if scan.assets %}
+<table>
+  <thead>
+    <tr><th>IP address</th><th>Reachable</th><th>Latency</th><th>Ports observed open</th></tr>
+  </thead>
+  <tbody>
+    {% for a in scan.assets %}
+    <tr>
+      <td><code>{{ a.ip_address }}</code></td>
+      <td>
+        {% if a.is_reachable %}<span class="badge completed">yes</span>
+        {% else %}<span class="badge failed">no</span>{% endif %}
+      </td>
+      <td>{{ ("%.1f ms" % a.latency_ms) if a.latency_ms is not none else "—" }}</td>
+      <td><code>{{ a.open_ports_observed or "—" }}</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+  <p class="muted">No assets recorded yet.</p>
+{% endif %}
+
+<p><a href="{{ url_for('main.scan_list') }}">← Back to scans</a></p>
+{% endblock %}

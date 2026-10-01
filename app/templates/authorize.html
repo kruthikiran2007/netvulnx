@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Authorize scan · NetVulnX{% endblock %}
+{% block content %}
+<h1>Confirm scan authorization</h1>
+
+<div class="auth-box">
+  <h2>What will be scanned</h2>
+  <dl class="meta">
+    <dt>Scan name</dt><dd>{{ scan.name }}</dd>
+    <dt>Target</dt><dd><code>{{ target.display }}</code> ({{ target.type }})</dd>
+    <dt>Hosts</dt><dd>{{ target.hosts|length }}</dd>
+    <dt>Ports</dt><dd><code>{{ ports|join(", ") }}</code></dd>
+  </dl>
+
+  <h2>What will happen</h2>
+  <p>
+    NetVulnX will attempt a plain TCP connection to each listed port on each
+    host ({{ timeout }}s timeout per attempt; honest worst case ≈ {{ est_max }}s).
+    This is a <strong>non-destructive reachability check</strong>:
+    no exploitation, no brute force, no denial-of-service behavior.
+  </p>
+
+  <p class="warning">
+    <strong>Only scan systems you own or have explicit written authorization to
+    assess.</strong> Unauthorized scanning may be illegal in your jurisdiction.
+  </p>
+
+  <form method="post" action="{{ url_for('main.authorize_scan_submit', scan_id=scan.id) }}">
+    <label class="check">
+      <input type="checkbox" name="confirm" value="yes" required>
+      I confirm that I own these systems or have explicit authorization to assess them.
+    </label>
+    <p>
+      <button class="btn primary" type="submit">Authorize &amp; start scan</button>
+      <a class="btn" href="{{ url_for('main.scan_list') }}">Cancel</a>
+    </p>
+  </form>
+</div>
+{% endblock %}
