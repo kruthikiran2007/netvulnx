@@ -1,4 +1,4 @@
-# NetVulnX Architecture (Milestone 4)
+# NetVulnX Architecture (Milestone 5)
 
 ## The big picture
 
@@ -107,10 +107,39 @@ holding measured facts plus deterministic derived flags (expired,
 self-signed). **Risk judgments are deliberately absent**: the Milestone 4
 rule engine will turn these observations into findings.
 
-## What's next (Milestone 5)
-Dashboard polish, the asset inventory view, and attack-surface visualization —
-all rendered from real database rows. Then Milestone 6: HTML reports,
-remediation tracking, and scan comparison.
+## What's next (Milestone 6)
+HTML reports, remediation tracking, and scan comparison. Then Milestone 7:
+testing, hardening, documentation.
+
+## Milestone 5: dashboard, asset inventory, attack-surface view
+
+All presentation, no new scanning. Every number on these pages comes from
+real database rows:
+
+- **`app/stats.py`** — pure aggregation helpers with zero database access:
+  `severity_counts`, `worst_severity`, `service_exposure` (per-service
+  exposures/assets/ports/worst-severity), `inventory_rows` (assets grouped
+  by IP: first/last seen, scan count, open-port union, finding totals),
+  `risk_history` (completed scans only, oldest first), `recent_findings`.
+  Pure = unit-testable with `SimpleNamespace` stand-ins (`tests/test_stats.py`).
+- **Dashboard** (`/`) — stat cards (scans, assets, open ports, findings),
+  findings-by-severity cards, a Chart.js risk-score bar chart per completed
+  scan, and the 5 latest findings linking to assets/scans.
+- **Asset inventory** (`/assets`) — one row per observed IP across all
+  scans; **asset detail** (`/assets/<ip>`) — per-scan timeline (ports with
+  worst severity, findings sorted most-severe-first).
+- **Attack surface** (`/attack-surface`) — aggregates **completed scans
+  only** (partial scans would misrepresent exposure): stat cards, a
+  horizontal bar chart of exposures per service, a severity doughnut, a
+  service-exposure table, and a per-asset port map of the latest completed
+  scan with severity-coloured chips. Charts load Chart.js from a CDN; every
+  chart mirrors an adjacent table, so the page is fully usable offline.
+- **Model additions** — `Asset.findings` and `Scan.findings` relationships
+  (backrefs `asset`/`scan`), so templates navigate Finding → scan/asset
+  without extra queries.
+- **Honesty rules kept**: a risk score of 0 is labelled "no rule matched",
+  not "secure"; interrupted scans are excluded from aggregates; empty states
+  explain what to do next instead of showing zeros silently.
 
 ## Milestone 4: rule engine + risk scoring (what's new)
 

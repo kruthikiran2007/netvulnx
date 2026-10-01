@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Attack surface · NetVulnX{% endblock %}
+{% block content %}
+<h1>Attack surface</h1>
+<p class="muted">
+  What is reachable and what the rules found — aggregated across
+  <strong>{{ completed }}</strong> completed scan{{ "s" if completed != 1 }}.
+  Interrupted or failed scans are excluded so partial data can't mislead you.
+  Every chart below mirrors the table next to it.
+</p>
+
+{% if completed == 0 %}
+<p class="muted">No completed scans yet. <a href="{{ url_for('main.new_scan_form') }}">Run a scan</a> to see your attack surface.</p>
+{% else %}
+
+<div class="cards">
+  <div class="card">
+    <div class="stat">{{ assets_with_ports }}</div>
+    <div class="label">Assets with open ports</div>
+  </div>
+  <div class="card">
+    <div class="stat">{{ services }}</div>
+    <div class="label">Distinct services exposed</div>
+  </div>
+  <div class="card">
+    <div class="stat">{{ total_findings }}</div>
+    <div class="label">Total findings</div>
+  </div>
+</div>
+
+<div class="chart-grid">
+  <div>
+    <h2>Exposed services</h2>
+    <p class="muted">Asset:port pairs per detected service, most exposed first.</p>
+    <div class="chart-wrap"><canvas id="svcChart"></canvas></div>
+  </div>
+  <div>
+    <h2>Findings by severity</h2>
+    <p class="muted">Counts come from the same rule matches shown on scan pages.</p>
+    <div class="chart-wrap"><canvas id="sevChart"></canvas></div>
+  </div>
+</div>
+
+<h2>Service exposure detail</h2>
+<table>
+  <tr><th>Service</th><th>Exposures</th><th>Assets</th><th>Ports</th><th>Worst finding</th></tr>
+  {% for e in exposure %}
+  <tr>
+    <td><strong>{{ e.service }}</strong></td>
+    <td>{{ e.exposures }}</td>
+    <td>{{ e.assets }}</td>
+    <td>
+      {% for p in e.ports %}<span class="port-chip">{{ p }}</span>{% endfor %}
+    </td>
+    <td>{% if e.worst %}<span class="badge sev-{{ e.worst }}">{{ e.worst }}</span>{% else %}<span class="muted">none</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if latest %}
+<h2>Latest scan surface: {{ latest.name }}</h2>
+<p class="muted">
+  Every open port on every asset in the most recent completed scan.
+  Chip colour = worst finding severity on that port; grey = no finding.
+</p>
+{% for s in surface %}
+<div class="card surface-card">
+  <div class="value"><a href="{{ url_for('main.asset_detail', ip=s.ip) }}"><code>{{ s.ip }}</code></a>
+    {% if s.hostname %}<span class="muted">{{ s.hostname }}</span>{% endif %}
+  </div>
+  <div class="port-row">
+    {% for p in s.ports %}
+    <span class="port-chip {% if p.worst %}sev-{{ p.worst }}{% endif %}"
+          title="{{ p.service }}{% if p.worst %} — worst finding: {{ p.worst }}{% endif %}">{{ p.port }} · {{ p.service }}</span>
+    {% else %}
+    <span class="muted">No open ports.</span>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if completed > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+const gridColor = "#30363d", tickColor = "#8b949e";
+new Chart(document.getElementById("svcChart"), {
+  type: "bar",
+  data: {
+    labels: {{ exposure | map(attribute="service") | list | tojson }},
+    datasets: [{
+      label: "Exposures (asset:port pairs)",
+      data: {{ exposure | map(attribute="exposures") | list | tojson }},
+      backgroundColor: "rgba(88, 166, 255, 0.55)",
+      borderColor: "rgba(88, 166, 255, 1)",
+      borderWidth: 1
+    }]
+  },
+  options: {
+    indexAxis: "y",
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { beginAtZero: true, ticks: { color: tickColor, precision: 0 }, grid: { color: gridColor } },
+      y: { ticks: { color: tickColor }, grid: { display: false } }
+    }
+  }
+});
+new Chart(document.getElementById("sevChart"), {
+  type: "doughnut",
+  data: {
+    labels: ["critical", "high", "medium", "low", "info"],
+    datasets: [{
+      data: [
+        {{ sev_counts["critical"] }}, {{ sev_counts["high"] }},
+        {{ sev_counts["medium"] }}, {{ sev_counts["low"] }}, {{ sev_counts["info"] }}
+      ],
+      backgroundColor: ["#e74c3c", "#f85149", "#d29922", "#58a6ff", "#8b949e"]
+    }]
+  },
+  options: { plugins: { legend: { labels: { color: tickColor } } } }
+});
+</script>
+{% endif %}
+{% endblock %}

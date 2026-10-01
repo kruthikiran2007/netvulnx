@@ -12,10 +12,12 @@ import math
 from datetime import datetime, timezone
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, current_app, jsonify)
+                   flash, current_app, jsonify, abort)
 
 from app import db
 from app.models import Scan, Asset, Port, Finding
+from app.stats import (severity_counts, worst_severity, service_exposure,
+                       inventory_rows, risk_history, recent_findings)
 from rules import SEVERITY_RANK
 from rules.scoring import FORMULA_TEXT
 from scanner import jobs
@@ -29,13 +31,100 @@ bp = Blueprint("main", __name__)
 def dashboard():
     """Home page. Every number comes from the database — nothing is hardcoded."""
     scans = Scan.query.order_by(Scan.created_at.desc()).all()
+    findings = Finding.query.all()
     return render_template(
         "dashboard.html",
         total_scans=len(scans),
         total_assets=Asset.query.count(),
         total_open_ports=Port.query.count(),
         completed_scans=Scan.query.filter_by(status="completed").count(),
+        total_findings=len(findings),
+        sev_counts=severity_counts(findings),
+        risk_history=risk_history(scans),
+        recent_findings=recent_findings(findings),
         recent_scans=scans[:5],
+    )
+
+
+@bp.get("/assets")
+def asset_inventory():
+    """Global asset inventory: one row per IP seen across all scans."""
+    assets = Asset.query.order_by(Asset.checked_at.desc()).all()
+    return render_template("assets.html", rows=inventory_rows(assets))
+
+
+@bp.get("/assets/<path:ip>")
+def asset_detail(ip):
+    """Timeline of one IP across every scan that observed it, newest first."""
+    assets = (Asset.query.filter_by(ip_address=ip)
+              .order_by(Asset.checked_at.desc()).all())
+    if not assets:
+        abort(404)
+    timeline = []
+    for a in assets:
+        port_rows = []
+        for p in sorted(a.ports, key=lambda x: x.port):
+            port_rows.append({
+                "port": p.port,
+                "service": p.service or "unknown",
+                "worst": worst_severity(f.severity for f in p.findings),
+            })
+        findings = sorted(a.findings,
+                          key=lambda f: (SEVERITY_RANK.get(f.severity, 99), f.id))
+        timeline.append({
+            "scan_id": a.scan_id, "scan_name": a.scan.name,
+            "status": a.scan.status, "hostname": a.hostname,
+            "checked_at": a.checked_at, "latency_ms": a.latency_ms,
+            "ports": port_rows, "findings": findings,
+        })
+    return render_template("asset_detail.html", ip=ip, timeline=timeline)
+
+
+@bp.get("/attack-surface")
+def attack_surface():
+    """What is exposed, aggregated across completed scans.
+
+    Only completed scans count: an interrupted scan's partial data would
+    misrepresent the surface.
+    """
+    completed_ids = [s.id for s in Scan.query.filter_by(status="completed").all()]
+    if completed_ids:
+        ports = Port.query.filter(Port.scan_id.in_(completed_ids)).all()
+        findings = Finding.query.filter(
+            Finding.scan_id.in_(completed_ids)).all()
+        assets = (Asset.query.filter(Asset.scan_id.in_(completed_ids))
+                  .order_by(Asset.checked_at.desc()).all())
+    else:
+        ports, findings, assets = [], [], []
+
+    exposure = service_exposure(ports)
+
+    # Latest completed scan, for the per-asset surface view.
+    latest = (Scan.query.filter_by(status="completed")
+              .order_by(Scan.completed_at.desc()).first())
+    surface = []
+    if latest:
+        for a in sorted(latest.assets, key=lambda x: x.ip_address):
+            port_rows = []
+            for p in sorted(a.ports, key=lambda x: x.port):
+                port_rows.append({
+                    "port": p.port,
+                    "service": p.service or "unknown",
+                    "worst": worst_severity(f.severity for f in p.findings),
+                })
+            surface.append({"ip": a.ip_address, "hostname": a.hostname,
+                            "ports": port_rows})
+
+    return render_template(
+        "attack_surface.html",
+        completed=len(completed_ids),
+        assets_with_ports=sum(1 for a in assets if a.ports),
+        services=len(exposure),
+        total_findings=len(findings),
+        sev_counts=severity_counts(findings),
+        exposure=exposure,
+        latest=latest,
+        surface=surface,
     )
 
 

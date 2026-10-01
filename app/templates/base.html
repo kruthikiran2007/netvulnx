@@ -8,9 +8,11 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">NetVulnX <span class="tag">milestone 1</span></div>
+    <div class="brand">NetVulnX <span class="tag">milestone 5</span></div>
     <nav>
       <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('main.asset_inventory') }}">Assets</a>
+      <a href="{{ url_for('main.attack_surface') }}">Attack surface</a>
       <a href="{{ url_for('main.scan_list') }}">Scans</a>
       <a href="{{ url_for('main.new_scan_form') }}" class="btn">+ New scan</a>
     </nav>

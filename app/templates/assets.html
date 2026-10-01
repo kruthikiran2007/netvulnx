@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Assets · NetVulnX{% endblock %}
+{% block content %}
+<h1>Asset inventory</h1>
+<p class="muted">
+  One row per IP address ever observed, grouped across all scans.
+  Ports shown are the union of every open port seen on that IP —
+  re-scan to refresh what is currently open.
+</p>
+
+{% if rows %}
+<table>
+  <tr>
+    <th>IP address</th>
+    <th>Hostname</th>
+    <th>First seen</th>
+    <th>Last seen</th>
+    <th>Scans</th>
+    <th>Open ports</th>
+    <th>Findings</th>
+    <th>Worst</th>
+  </tr>
+  {% for r in rows %}
+  <tr>
+    <td><a href="{{ url_for('main.asset_detail', ip=r.ip) }}"><code>{{ r.ip }}</code></a></td>
+    <td>{{ r.hostname or "—" }}</td>
+    <td>{{ r.first_seen.strftime("%Y-%m-%d %H:%M") if r.first_seen else "—" }}</td>
+    <td>{{ r.last_seen.strftime("%Y-%m-%d %H:%M") if r.last_seen else "—" }}</td>
+    <td>{{ r.scans }}</td>
+    <td>
+      {% for port, svc in r.ports %}
+      <span class="port-chip" title="{{ svc }}">{{ port }}</span>
+      {% endfor %}
+      {% if not r.ports %}<span class="muted">none observed</span>{% endif %}
+    </td>
+    <td>{{ r.findings }}</td>
+    <td>{% if r.worst %}<span class="badge sev-{{ r.worst }}">{{ r.worst }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">No assets yet. <a href="{{ url_for('main.new_scan_form') }}">Run a scan</a> to populate the inventory.</p>
+{% endif %}
+{% endblock %}

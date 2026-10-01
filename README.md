@@ -4,14 +4,15 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
-> **Milestone 4 status:** the rule engine is live. After service analysis,
-> a deterministic engine matches 15 rules against the measured observations
-> (expired/self-signed/mismatched certs, obsolete TLS, weak ciphers, missing
-> security headers, directory listings, anonymous FTP, and more). Each match
-> becomes a finding with evidence, confidence, impact, remediation, and
-> references — plus an explainable risk score. Rules never invent findings:
-> no match, no finding. Reporting and scan comparison arrive in later
-> milestones.
+> **Milestone 5 status:** dashboards are live. The home page shows real
+> aggregate stats (scans, assets, open ports, findings by severity), a risk
+> score chart per completed scan, and the latest findings. A global **asset
+> inventory** groups every observed IP across scans with first/last seen,
+> open-port union, and worst severity — each with a per-scan timeline. The
+> **attack-surface view** aggregates exposed services across completed scans
+> (charts mirror the tables) plus a per-asset port map of the latest scan.
+> Every number comes from the database; charts use Chart.js on real data.
+> Reporting and scan comparison arrive in later milestones.
 
 ## Safety first
 
@@ -84,6 +85,6 @@ netvulnx/
 2. **Port scanning + fingerprinting** ✅ — real TCP connect scan, banner grabbing, service ID with confidence, background jobs, scan profiles
 3. **HTTP/HTTPS + TLS analysis** ✅ — TLS handshake/cert/protocol analysis, HTTP redirect + security-header checks, safe DNS/SMTP/FTP service checks, TLS detection in fingerprinting
 4. **Rule engine + risk scoring + evidence** ✅ — 15 deterministic rules turn observations into findings with evidence/confidence/impact/remediation; explainable risk score; no invented findings
-5. **Dashboard, assets, attack-surface view** — all from real data
+5. **Dashboard, assets, attack-surface view** ✅ — real-data aggregates, risk chart, latest findings; global asset inventory with per-IP timelines; attack-surface view (service exposure + latest-scan port map); all charts mirror tables
 6. **Reports, remediation tracking, scan comparison**
 7. **Testing, hardening, documentation**

@@ -4,7 +4,7 @@
 <h1>Dashboard</h1>
 <p class="muted">
   Every number below comes from the scan database — nothing is hardcoded.
-  Findings, risk scoring and charts arrive in Milestone 4.
+  A risk score of 0 means no rule matched, not that a target is secure.
 </p>
 
 <div class="cards">
@@ -24,7 +24,44 @@
     <div class="stat">{{ total_open_ports }}</div>
     <div class="label">Open ports found</div>
   </div>
+  <div class class="card">
+    <div class="stat">{{ total_findings }}</div>
+    <div class="label">Total findings</div>
+  </div>
 </div>
+
+<h2>Findings by severity</h2>
+<div class="cards">
+  {% for sev in ["critical", "high", "medium", "low", "info"] %}
+  <div class="card">
+    <div class="stat"><span class="badge sev-{{ sev }}">{{ sev_counts[sev] }}</span></div>
+    <div class="label">{{ sev }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if risk_history %}
+<h2>Risk score per completed scan</h2>
+<p class="muted">Higher = more (and more severe) rule matches. Only completed scans are shown.</p>
+<div class="chart-wrap">
+  <canvas id="riskChart"></canvas>
+</div>
+{% endif %}
+
+{% if recent_findings %}
+<h2>Latest findings</h2>
+<table>
+  <tr><th>Severity</th><th>Finding</th><th>Asset</th><th>Scan</th></tr>
+  {% for f in recent_findings %}
+  <tr>
+    <td><span class="badge sev-{{ f.severity }}">{{ f.severity }}</span></td>
+    <td>{{ f.title }}</td>
+    <td><a href="{{ url_for('main.asset_detail', ip=f.asset.ip_address) }}">{{ f.asset.ip_address }}</a></td>
+    <td><a href="{{ url_for('main.scan_detail', scan_id=f.scan_id) }}">{{ f.scan.name }}</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
 
 <h2>Recent scans</h2>
 {% if recent_scans %}
@@ -32,5 +69,33 @@
   {% include "scan_table.html" %}
 {% else %}
   <p class="muted">No scans yet. <a href="{{ url_for('main.new_scan_form') }}">Create your first scan</a> — try <code>127.0.0.1</code>.</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if risk_history %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById("riskChart"), {
+  type: "bar",
+  data: {
+    labels: {{ risk_history | map(attribute="name") | list | tojson }},
+    datasets: [{
+      label: "Risk score",
+      data: {{ risk_history | map(attribute="risk") | list | tojson }},
+      backgroundColor: "rgba(88, 166, 255, 0.55)",
+      borderColor: "rgba(88, 166, 255, 1)",
+      borderWidth: 1
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, ticks: { color: "#8b949e" }, grid: { color: "#30363d" } },
+      x: { ticks: { color: "#8b949e" }, grid: { display: false } }
+    }
+  }
+});
+</script>
 {% endif %}
 {% endblock %}

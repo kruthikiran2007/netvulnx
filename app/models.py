@@ -53,6 +53,9 @@ class Scan(db.Model):
 
     # One scan has many assets; deleting a scan deletes its assets too.
     assets = db.relationship("Asset", backref="scan", cascade="all, delete-orphan")
+    # ...and many findings (Milestone 4+). Gives Finding a `scan` backref.
+    findings = db.relationship("Finding", backref="scan",
+                               cascade="all, delete-orphan")
 
 
 class Asset(db.Model):
@@ -69,8 +72,9 @@ class Asset(db.Model):
     open_ports_observed = db.Column(db.String(255), default="")  # e.g. "80,443"
     checked_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
 
-    # One asset has many open ports (Milestone 2+).
+    # One asset has many open ports (Milestone 2+) and many findings (M4+).
     ports = db.relationship("Port", backref="asset", cascade="all, delete-orphan")
+    findings = db.relationship("Finding", backref="asset", cascade="all, delete-orphan")
 
 
 class TlsInfo(db.Model):

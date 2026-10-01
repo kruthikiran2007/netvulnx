@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Asset {{ ip }} · NetVulnX{% endblock %}
+{% block content %}
+<h1><code>{{ ip }}</code></h1>
+<p class="muted">
+  <a href="{{ url_for('main.asset_inventory') }}">← Back to inventory</a>
+  · Every scan that observed this host, newest first.
+</p>
+
+{% for t in timeline %}
+<div class="card">
+  <div class="value">
+    <a href="{{ url_for('main.scan_detail', scan_id=t.scan_id) }}">{{ t.scan_name }}</a>
+    <span class="badge {{ t.status }}">{{ t.status }}</span>
+    {% if t.hostname %}<span class="muted">{{ t.hostname }}</span>{% endif %}
+  </div>
+  <div class="label">
+    Observed {{ t.checked_at.strftime("%Y-%m-%d %H:%M") }}
+    {% if t.latency_ms is not none %} · latency {{ "%.1f"|format(t.latency_ms) }} ms{% endif %}
+  </div>
+
+  {% if t.ports %}
+  <h3>Open ports ({{ t.ports|length }})</h3>
+  <table>
+    <tr><th>Port</th><th>Service</th><th>Worst finding</th></tr>
+    {% for p in t.ports %}
+    <tr>
+      <td><code>{{ p.port }}</code></td>
+      <td>{{ p.service }}</td>
+      <td>
+        {% if p.worst %}<span class="badge sev-{{ p.worst }}">{{ p.worst }}</span>
+        {% else %}<span class="muted">none</span>{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No open ports observed on this host in this scan.</p>
+  {% endif %}
+
+  {% if t.findings %}
+  <h3>Findings ({{ t.findings|length }})</h3>
+  {% for f in t.findings %}
+  <div class="finding sev-{{ f.severity }}">
+    <span class="badge sev-{{ f.severity }}">{{ f.severity }}</span>
+    <strong>{{ f.title }}</strong>
+    <span class="muted">· {{ f.confidence }} · port {{ f.port.port if f.port else "—" }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}
