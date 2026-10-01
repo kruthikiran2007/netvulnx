@@ -4,15 +4,14 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
-> **Milestone 6 status:** reporting and tracking are live. Every scan gets a
-> printable **HTML report** (executive summary, full findings with evidence,
-> assets & open ports, methodology and limitations — use the browser's
-> Print → Save as PDF for a PDF copy). Findings can be **triaged** (open →
-> acknowledged → resolved / false positive) with a note; triage never alters
-> the measured evidence, and scan pages show remediation progress. **Compare
-> scans** diffs two completed scans: new/gone findings, opened/closed ports,
-> and the risk-score delta. Remaining: Milestone 7 (testing, hardening,
-> documentation).
+> **Milestone 7 status:** complete. Hardening is in: per-session **CSRF
+> tokens** on every POST form, security headers (CSP, nosniff, DENY framing,
+> same-origin referrer), `HttpOnly` + `SameSite=Lax` session cookies, and a
+> loud startup warning when the development secret key is in use. The full
+> documentation set now ships: API, TESTING, SECURITY, THREAT_MODEL,
+> LIMITATIONS, ROADMAP, LAB_SETUP, DEVELOPMENT, and PROJECT_REPORT. All
+> quality gates pass — **89 unit tests + 27 end-to-end checks** (real scans
+> against loopback fake services).
 
 ## Safety first
 
@@ -87,4 +86,4 @@ netvulnx/
 4. **Rule engine + risk scoring + evidence** ✅ — 15 deterministic rules turn observations into findings with evidence/confidence/impact/remediation; explainable risk score; no invented findings
 5. **Dashboard, assets, attack-surface view** ✅ — real-data aggregates, risk chart, latest findings; global asset inventory with per-IP timelines; attack-surface view (service exposure + latest-scan port map); all charts mirror tables
 6. **Reports, remediation tracking, scan comparison** ✅ — printable HTML report per scan (browser Print → PDF); finding triage (open/acknowledged/resolved/false positive) with notes + remediation progress; scan diff (new/gone findings, opened/closed ports, risk delta)
-7. **Testing, hardening, documentation**
+7. **Testing, hardening, documentation** ✅ — 89 unit tests + 27 end-to-end checks; CSRF protection, security headers, hardened session cookies, secret-key hygiene; full doc set (API, TESTING, SECURITY, THREAT_MODEL, LIMITATIONS, ROADMAP, LAB_SETUP, DEVELOPMENT, PROJECT_REPORT)

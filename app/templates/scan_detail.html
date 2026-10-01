@@ -29,6 +29,7 @@
   <div class="progress"><div class="bar" style="width: {{ scan.progress }}%"></div></div>
   <p class="muted" id="stage">{{ scan.current_stage }} — {{ scan.progress }}%</p>
   <form method="post" action="{{ url_for('main.cancel_scan', scan_id=scan.id) }}" style="margin-top:10px">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <button class="btn" type="submit">Cancel scan</button>
   </form>
 {% endif %}

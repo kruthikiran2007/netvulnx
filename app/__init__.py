@@ -26,6 +26,49 @@ def create_app(config_class=None):
     from app import routes
     app.register_blueprint(routes.bp)
 
+    # --- Hardening (Milestone 7) ---
+    from app import csrf as _csrf
+
+    @app.context_processor
+    def _inject_csrf():
+        # Makes {{ csrf_token() }} available in every template.
+        return {"csrf_token": _csrf.get_token}
+
+    @app.before_request
+    def _check_csrf():
+        # Every POST must carry this session's CSRF token.
+        from flask import request as _request
+        if _request.method == "POST":
+            _csrf.validate_csrf()
+
+    @app.after_request
+    def _security_headers(response):
+        # Cheap, safe defaults. The CSP allows our own inline scripts and
+        # the Chart.js CDN; everything else stays same-origin.
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "same-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "object-src 'none'; base-uri 'self'")
+        return response
+
+    # Harden the session cookie. (Flask's own default leaves SameSite unset,
+    # so setdefault would be a no-op — set it unless already configured.
+    # Secure=true needs HTTPS, which the local dev server doesn't have —
+    # see SECURITY.md.)
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    if not app.config.get("SESSION_COOKIE_SAMESITE"):
+        app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+    if app.config.get("SECRET_KEY") == "dev-only-change-me":
+        app.logger.warning(
+            "Using the DEVELOPMENT secret key — set the NETVULNX_SECRET_KEY "
+            "environment variable before exposing this app to anyone else.")
+
     # Template filter: parse JSON stored in text columns (redirect chains,
     # header lists, check details) back into lists/dicts for rendering.
     import json as _json

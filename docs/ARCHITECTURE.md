@@ -107,11 +107,34 @@ holding measured facts plus deterministic derived flags (expired,
 self-signed). **Risk judgments are deliberately absent**: the Milestone 4
 rule engine will turn these observations into findings.
 
-## What's next (Milestone 7)
-Testing, hardening, documentation: the remaining required docs
-(API.md, TESTING.md, SECURITY.md, THREAT_MODEL.md, LIMITATIONS.md,
-ROADMAP.md, PROJECT_REPORT.md, LAB_SETUP.md, DEVELOPMENT.md), CSRF
-protection, production SECRET_KEY handling, and a hardening pass.
+## What's next — beyond Milestone 7
+
+Milestone 7 (testing, hardening, documentation) is complete: CSRF tokens on
+all POSTs (`app/csrf.py`), security headers + CSP, hardened session cookies,
+secret-key startup warning, 7 new security tests, and the full doc set
+(API, TESTING, SECURITY, THREAT_MODEL, LIMITATIONS, ROADMAP, LAB_SETUP,
+DEVELOPMENT, PROJECT_REPORT). Future work is tracked in
+`docs/ROADMAP.md` (CVE mapping, authentication, scheduled scans, …);
+things the project will never do are listed in `docs/SECURITY.md` §6.
+
+## Milestone 7: hardening & documentation
+
+- **CSRF protection** (`app/csrf.py`, no new dependencies) — per-session
+  random token via `secrets.token_urlsafe`, exposed to templates as
+  `{{ csrf_token() }}`; a `before_request` hook validates every POST with
+  `hmac.compare_digest` and aborts 403 on mismatch. All four POST forms
+  (new scan, authorize, cancel, triage) carry the hidden field.
+- **Response hardening** — `after_request` sets `X-Content-Type-Options:
+  nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, and a
+  CSP allowing only our inline scripts + the Chart.js CDN.
+- **Session & secret hygiene** — `HttpOnly` + `SameSite=Lax` cookies
+  (explicitly set: Flask's own default leaves SameSite unset); a loud
+  startup warning when the dev fallback `SECRET_KEY` is in use.
+- **Docs** — the remaining required set: `API.md`, `TESTING.md`,
+  `SECURITY.md`, `THREAT_MODEL.md`, `LIMITATIONS.md`, `ROADMAP.md`,
+  `LAB_SETUP.md`, `DEVELOPMENT.md`, `PROJECT_REPORT.md`.
+- **Tests** — `tests/test_csrf.py` (7 tests: token in forms, forged POST
+  → 403, valid token → 302, per-session rotation, headers, cookie flags).
 
 ## Milestone 6: reports, remediation tracking, scan comparison
 

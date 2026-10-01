@@ -45,6 +45,7 @@
   {% endif %}
   {% if triage_form %}
   <form class="triage-form" method="post" action="{{ url_for('main.finding_status', finding_id=f.id) }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <label>Mark as
       <select name="status">
         {% for s in finding_statuses %}
