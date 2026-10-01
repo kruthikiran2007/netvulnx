@@ -4,10 +4,12 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
-> **Milestone 1 status:** project foundation is in place. You can create a
-> scan, pass the authorization gate, and run a real TCP reachability check.
-> Port scanning, fingerprinting, the rule engine, risk scoring and reporting
-> arrive in later milestones.
+> **Milestone 2 status:** real port scanning is live. Authorized scans run
+> a background pipeline — host discovery → TCP connect port scan (bounded
+> thread pool) → service fingerprinting with confidence scores — with live
+> progress and per-port/service results. Scan profiles (Quick / Standard /
+> Deep / Custom) define behavior explicitly. The rule engine, risk scoring
+> and reporting arrive in later milestones.
 
 ## Safety first
 
@@ -52,23 +54,32 @@ netvulnx/
 ├── requirements.txt       # Python dependencies
 ├── app/
 │   ├── __init__.py        # Flask app factory (builds the app)
-│   ├── models.py          # database tables: Scan, Asset
-│   ├── routes.py          # web pages: dashboard, scans, authorization gate
+│   ├── models.py          # database tables: Scan, Asset, Port
+│   ├── routes.py          # web pages: dashboard, scans, authorization gate, status API
 │   ├── templates/         # HTML pages (rendered from real DB data)
 │   └── static/style.css   # dark console theme
 ├── scanner/
 │   ├── targets.py         # target parsing + scope validation (with tests)
-│   └── reachability.py    # TCP reachability checks (Milestone-1 scan)
+│   ├── reachability.py    # host discovery — Phase 1 of a scan
+│   ├── portscan.py        # TCP connect scan, bounded thread pool — Phase 2
+│   ├── fingerprint.py     # banner grab + service ID with confidence — Phase 3
+│   ├── engine.py          # scan orchestrator (background worker) — Phase 4
+│   └── jobs.py            # job start / cancel / crash recovery
 ├── rules/                 # vulnerability rule engine (Milestone 4 — planned)
 ├── tests/                 # pytest unit tests
 └── docs/
     └── ARCHITECTURE.md    # how the pieces fit together
 ```
 
+> **Upgrading from Milestone 1?** The database schema changed (new tables
+> and columns). During development, delete the old database before running
+> the new code: `rm -f netvulnx.db` inside the project folder. (Proper
+> database migrations arrive in a later milestone.)
+
 ## Milestones
 
 1. **Foundation & safety** ✅ — scaffold, DB, UI shell, authorization gate, reachability
-2. **Port scanning + fingerprinting** — real TCP connect scan, banner grabbing, service ID
+2. **Port scanning + fingerprinting** ✅ — real TCP connect scan, banner grabbing, service ID with confidence, background jobs, scan profiles
 3. **HTTP/HTTPS + TLS analysis** — headers, redirects, certificates, TLS config
 4. **Rule engine + risk scoring + evidence** — the custom detection differentiator
 5. **Dashboard, assets, attack-surface view** — all from real data

@@ -25,8 +25,12 @@ class Scan(db.Model):
     target_type = db.Column(db.String(20), nullable=False)  # 'ip', 'cidr' or 'hostname'
     ports_raw = db.Column(db.String(120), nullable=False)  # e.g. "80,443,22"
 
-    # Lifecycle: draft -> awaiting_authorization -> running -> completed | failed
-    # (cancelled if the user declines at the authorization gate)
+    # Scan profile: 'quick', 'standard', 'deep' or 'custom'. Defines behavior
+    # (which ports, whether host discovery may skip silent hosts).
+    profile = db.Column(db.String(20), nullable=False, default="custom")
+
+    # Lifecycle: draft -> awaiting_authorization -> running
+    #            -> completed | failed | cancelled | interrupted
     status = db.Column(db.String(20), nullable=False, default="draft")
 
     # The authorization gate: nothing runs until the user explicitly confirms.
@@ -58,4 +62,34 @@ class Asset(db.Model):
     is_reachable = db.Column(db.Boolean, nullable=False, default=False)
     latency_ms = db.Column(db.Float)  # TCP connect round-trip time, when reachable
     open_ports_observed = db.Column(db.String(255), default="")  # e.g. "80,443"
+    checked_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+    # One asset has many open ports (Milestone 2+).
+    ports = db.relationship("Port", backref="asset", cascade="all, delete-orphan")
+
+
+class Port(db.Model):
+    """One OPEN port found on an asset, with its fingerprinted service.
+
+    We store open ports only — closed/filtered ports are counted in the
+    scan summary, not stored row by row. Every row carries the evidence
+    (banner) and the confidence behind the service identification.
+    """
+    __tablename__ = "ports"
+
+    id = db.Column(db.Integer, primary_key=True)
+    scan_id = db.Column(db.Integer, db.ForeignKey("scans.id"), nullable=False)
+    asset_id = db.Column(db.Integer, db.ForeignKey("assets.id"), nullable=False)
+
+    port = db.Column(db.Integer, nullable=False)
+    protocol = db.Column(db.String(10), nullable=False, default="tcp")
+    state = db.Column(db.String(10), nullable=False, default="open")
+
+    service = db.Column(db.String(40))       # e.g. "ssh", "http", "unknown"
+    confidence = db.Column(db.Integer)       # 0-100, strength of the evidence
+    product = db.Column(db.String(80))       # e.g. "OpenSSH"
+    version = db.Column(db.String(40))       # e.g. "8.9p1"
+    banner = db.Column(db.Text)              # raw banner, truncated (evidence)
+    method = db.Column(db.String(120))       # how we identified it
+
     checked_at = db.Column(db.DateTime, nullable=False, default=_utcnow)

@@ -27,7 +27,7 @@ _ALLOWED_NETWORKS = [
     ipaddress.ip_network("::1/128"),        # IPv6 loopback (this machine)
 ]
 
-MAX_PORTS_PER_SCAN = 32
+MAX_PORTS_PER_SCAN = 1024
 
 
 def _in_allowed_scope(ip, allow_public: bool) -> bool:
@@ -144,7 +144,7 @@ def parse_ports(text: str, default: str = "80,443,22") -> list:
         raise TargetError("No ports to check. Examples: 80,443  or  1-100.")
     if len(ports) > MAX_PORTS_PER_SCAN:
         raise TargetError(
-            f"Too many ports ({len(ports)}). The Milestone-1 limit is "
-            f"{MAX_PORTS_PER_SCAN}, to keep checks quick and gentle."
+            f"Too many ports ({len(ports)}). The limit is "
+            f"{MAX_PORTS_PER_SCAN} ports per scan, to keep checks sane."
         )
     return sorted(ports)

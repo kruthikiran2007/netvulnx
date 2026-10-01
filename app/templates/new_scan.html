@@ -25,10 +25,25 @@
     <span class="hint">An IP address, a CIDR range (max /24), or a hostname.</span>
   </label>
 
+  <fieldset class="profiles">
+    <legend>Scan profile — each has clearly defined behavior</legend>
+    {% for key, p in profiles.items() %}
+    <label class="profile-card">
+      <input type="radio" name="profile" value="{{ key }}"
+             {% if (profile or 'quick') == key %}checked{% endif %}>
+      <span class="profile-name">{{ p.label }}</span>
+      <span class="profile-desc">{{ p.description }}</span>
+      {% if p.ports is not none %}
+      <span class="profile-meta">{{ p.ports|length }} ports</span>
+      {% endif %}
+    </label>
+    {% endfor %}
+  </fieldset>
+
   <label>
-    Ports to check
-    <input type="text" name="ports" value="{{ ports or default_ports }}" required>
-    <span class="hint">Comma-separated and/or ranges, e.g. <code>80,443</code> or <code>20-25,80</code>. Max 32 ports in Milestone 1.</span>
+    Ports to check <span class="hint-inline">(used only for the Custom profile)</span>
+    <input type="text" name="ports" value="{{ ports or default_ports }}">
+    <span class="hint">Comma-separated and/or ranges, e.g. <code>80,443</code> or <code>20-25,80</code>. Max 1024 ports.</span>
   </label>
 
   <button class="btn primary" type="submit">Continue → review &amp; authorize</button>

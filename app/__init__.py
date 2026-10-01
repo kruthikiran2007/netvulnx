@@ -31,4 +31,9 @@ def create_app(config_class=None):
     with app.app_context():
         db.create_all()
 
+    # Crash recovery: scans left "running" by a previous process must not
+    # stay stuck forever — mark them interrupted, honestly.
+    from scanner import jobs
+    jobs.recover_interrupted(app)
+
     return app

@@ -8,16 +8,21 @@
   <dl class="meta">
     <dt>Scan name</dt><dd>{{ scan.name }}</dd>
     <dt>Target</dt><dd><code>{{ target.display }}</code> ({{ target.type }})</dd>
+    <dt>Profile</dt><dd><strong>{{ profile.label }}</strong> — {{ profile.description }}</dd>
     <dt>Hosts</dt><dd>{{ target.hosts|length }}</dd>
-    <dt>Ports</dt><dd><code>{{ ports|join(", ") }}</code></dd>
+    <dt>Ports</dt><dd>{{ ports|length }} ports
+      {% if ports|length <= 40 %}<code>{{ ports|join(", ") }}</code>{% endif %}</dd>
   </dl>
 
   <h2>What will happen</h2>
   <p>
-    NetVulnX will attempt a plain TCP connection to each listed port on each
-    host ({{ timeout }}s timeout per attempt; honest worst case ≈ {{ est_max }}s).
-    This is a <strong>non-destructive reachability check</strong>:
-    no exploitation, no brute force, no denial-of-service behavior.
+    NetVulnX will run <strong>host discovery</strong>, then a <strong>TCP
+    connect port scan</strong> (max 32 parallel connections), then
+    <strong>service fingerprinting</strong> (passive banner grab plus one
+    benign HTTP probe per open port) on each host.
+    Honest worst case ≈ {{ est_max }}s if every probe hits its full timeout.
+    This is <strong>non-destructive</strong>: no exploitation, no brute force,
+    no denial-of-service behavior — and you can cancel at any time.
   </p>
 
   <p class="warning">

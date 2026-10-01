@@ -113,4 +113,9 @@ def test_backwards_range_rejected():
 
 def test_too_many_ports_rejected():
     with pytest.raises(TargetError, match="Too many ports"):
-        parse_ports("1-1000")
+        parse_ports("1-2000")  # limit is 1024 ports per scan
+
+
+def test_1024_ports_allowed():
+    ports = parse_ports("1-1024")
+    assert len(ports) == 1024
