@@ -72,6 +72,39 @@ target is secure.**
 An open port with no finding is not a vulnerability: it is just a reachable
 service. NetVulnX never invents findings.
 
+## Triaging findings
+
+On a scan's detail page, every finding has a **Mark as** dropdown:
+
+- **open** — not looked at yet (the default);
+- **acknowledged** — you've seen it and are deciding what to do;
+- **resolved** — you fixed it (closed the port, added the header, …);
+- **false positive** — you checked and it doesn't apply.
+
+Add an optional note (e.g. a ticket number). Triage records *your*
+judgment — it never changes the measured evidence underneath. The scan page
+shows remediation progress ("3 of 11 closed"), and the Scans list shows how
+many findings are still open per scan.
+
+Tip: fix something, re-scan, then use **Compare scans** to confirm the
+finding is really gone.
+
+## Reports
+
+On any scan page, **View printable report** opens a clean assessment
+report: summary, executive overview, every finding with its evidence, the
+asset/port inventory, and a methodology & limitations section. Click
+**Print / Save as PDF** (or your browser's print dialog) to keep a PDF
+copy. The report is generated from live data and stamped with the time it
+was made.
+
+## Comparing scans
+
+**Scans → Compare scans**: pick two completed scans to see what changed —
+new vs. gone findings, opened vs. closed ports, and whether the risk score
+went up or down. A finding counts as "the same" only if the same rule
+fired on the same host and port.
+
 ## Honest limitations
 
 - Only TCP connect scans — no UDP, no OS detection, no vulnerability

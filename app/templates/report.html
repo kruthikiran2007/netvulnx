@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Report: {{ scan.name }} · NetVulnX{% endblock %}
+{% block content %}
+<div class="report">
+<div class="report-actions">
+  <a href="{{ url_for('main.scan_detail', scan_id=scan.id) }}">← Back to scan</a>
+  <button class="btn" onclick="window.print()">Print / Save as PDF</button>
+</div>
+
+<h1>Network vulnerability assessment report</h1>
+<p class="muted">Generated {{ generated_at.strftime("%Y-%m-%d %H:%M UTC") }} from live scan data.
+This report describes measured observations — it does not certify security.</p>
+
+<h2>1 · Scan summary</h2>
+<table>
+  <tr><th>Scan</th><td>{{ scan.name }}</td></tr>
+  <tr><th>Target</th><td><code>{{ scan.target_raw }}</code> ({{ scan.target_type }}, {{ scan.profile }} profile)</td></tr>
+  <tr><th>Status</th><td><span class="badge {{ scan.status }}">{{ scan.status.replace("_", " ") }}</span></td></tr>
+  <tr><th>Started</th><td>{{ scan.started_at.strftime("%Y-%m-%d %H:%M") if scan.started_at else "—" }}</td></tr>
+  <tr><th>Completed</th><td>{{ scan.completed_at.strftime("%Y-%m-%d %H:%M") if scan.completed_at else "—" }}</td></tr>
+  <tr><th>Authorization</th><td>{% if scan.authorized %}Confirmed {{ scan.authorized_at.strftime("%Y-%m-%d %H:%M") if scan.authorized_at else "" }}{% else %}Not recorded{% endif %}</td></tr>
+</table>
+
+<h2>2 · Executive summary</h2>
+<div class="cards">
+  <div class="card">
+    <div class="label">Risk score</div>
+    <div class="value">{{ scan.risk_score }}</div>
+    <div class="muted small">{{ formula_text }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Assets</div>
+    <div class="value">{{ assets|length }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Open ports</div>
+    <div class="value">{{ open_ports|length }}</div>
+  </div>
+  <div class="card">
+    <div class="label">Findings</div>
+    <div class="value">{{ findings|length }}</div>
+    <div class="muted small">{{ closed }} closed (resolved / false positive)</div>
+  </div>
+</div>
+{% if sev_counts %}
+<p>
+  {% for sev in ["critical", "high", "medium", "low", "info"] %}
+    {% if sev_counts.get(sev) %}<span class="badge sev-{{ sev }}">{{ sev_counts[sev] }} {{ sev }}</span> {% endif %}
+  {% endfor %}
+</p>
+{% endif %}
+<p class="muted"><strong>How to read this:</strong> severity = impact <em>if abused</em>;
+confidence = how sure the measurement is. A risk score of 0 means no detection
+rule matched — not that the target is secure. An open port with no finding is a
+reachable service, not a vulnerability.</p>
+
+<h2>3 · Findings ({{ findings|length }})</h2>
+{% if findings %}
+  {% for f in findings %}
+    {% set triage_form = false %}
+    {% include "_finding_card.html" %}
+  {% endfor %}
+{% else %}
+<p class="muted">No findings — none of the detection rules matched the measured observations.</p>
+{% endif %}
+
+<h2>4 · Assets &amp; open ports</h2>
+{% if open_ports %}
+<table>
+  <tr><th>Asset</th><th>Port</th><th>Service</th><th>Confidence</th><th>Product</th></tr>
+  {% for p in open_ports %}
+  <tr>
+    <td><code>{{ p.asset.ip_address }}</code></td>
+    <td><code>{{ p.port }}/{{ p.protocol }}</code></td>
+    <td><code>{{ p.service or "unknown" }}</code></td>
+    <td>{{ p.confidence }}%</td>
+    <td>{{ (p.product or "") + (" " + p.version if p.version else "") or "—" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">No open ports were found on the scanned targets.</p>
+{% endif %}
+
+<h2>5 · Methodology &amp; limitations</h2>
+<ul>
+  <li>Read-only TCP connect scanning with bounded concurrency and timeouts; no exploitation, no denial of service.</li>
+  <li>Service identification from banners and protocol handshakes; TLS certificates inspected, never modified.</li>
+  <li>Findings come only from deterministic rules matching measured evidence — open ports alone are never findings.</li>
+  <li>Coverage is limited to the scanned ports and TCP only; absence of findings does not mean absence of risk.</li>
+  <li>Finding triage (acknowledged / resolved / false positive) is a human judgment recorded in NetVulnX; it does not alter the underlying measurements.</li>
+</ul>
+<p class="muted small">NetVulnX — authorized assessments only. Report generated from scan #{{ scan.id }}.</p>
+</div>
+{% endblock %}

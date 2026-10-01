@@ -1,0 +1,60 @@
+{# Shared finding card: scan detail page and HTML report.
+   Expects: f (Finding), finding_statuses (tuple of valid statuses).
+   Set triage_form=true to show the status-change form (scan detail only;
+   the report is read-only). #}
+<div class="finding sev-{{ f.severity }}">
+  <div class="finding-head">
+    <span class="badge sev-{{ f.severity }}">{{ f.severity }}</span>
+    <span class="conf-badge">{{ f.confidence }}</span>
+    <strong>{{ f.title }}</strong>
+    <span class="status-badge st-{{ f.status or 'open' }}">{{ (f.status or "open").replace("_", " ") }}</span>
+  </div>
+  <div class="muted small">
+    {% if f.port %}<code>{{ f.port.asset.ip_address }}:{{ f.port.port }}</code> ·{% endif %}
+    rule <code>{{ f.rule_id }}</code>
+    · {{ f.created_at.strftime("%Y-%m-%d %H:%M") if f.created_at else "" }}
+  </div>
+  <p>{{ f.description }}</p>
+  {% set ev = f.evidence|fromjson %}
+  {% if ev %}
+  <h4>Evidence <span class="muted">(measured, not guessed)</span></h4>
+  <dl class="evidence">
+    {% for k, v in ev.items() %}
+    <dt>{{ k.replace("_", " ") }}</dt><dd><code>{{ v }}</code></dd>
+    {% endfor %}
+  </dl>
+  {% endif %}
+  <h4>Impact</h4>
+  <p>{{ f.impact }}</p>
+  <h4>Remediation</h4>
+  <p>{{ f.remediation }}</p>
+  {% set refs = f.references|fromjson %}
+  {% if refs %}
+  <h4>References</h4>
+  <ul class="refs">
+    {% for r in refs %}
+    <li><a href="{{ r }}" target="_blank" rel="noopener">{{ r }}</a></li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  {% if f.status_note %}
+  <h4>Triage note</h4>
+  <p class="triage-note">{{ f.status_note }}
+    <span class="muted small">— {{ f.status_updated_at.strftime("%Y-%m-%d %H:%M") if f.status_updated_at else "" }}</span>
+  </p>
+  {% endif %}
+  {% if triage_form %}
+  <form class="triage-form" method="post" action="{{ url_for('main.finding_status', finding_id=f.id) }}">
+    <label>Mark as
+      <select name="status">
+        {% for s in finding_statuses %}
+        <option value="{{ s }}" {% if s == f.status %}selected{% endif %}>{{ s.replace("_", " ") }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <input type="text" name="note" placeholder="Note (optional, e.g. ticket #)" maxlength="280"
+           value="{{ f.status_note or '' }}">
+    <button type="submit" class="btn small">Update</button>
+  </form>
+  {% endif %}
+</div>

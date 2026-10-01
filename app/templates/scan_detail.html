@@ -102,6 +102,18 @@
 
 <h2>Findings ({{ findings|length }})</h2>
 {% if findings %}
+<div class="detail-actions">
+  <a class="btn" href="{{ url_for('main.scan_report', scan_id=scan.id) }}">View printable report</a>
+</div>
+<div class="remediation">
+  <div class="remediation-head">
+    <strong>Remediation progress</strong>
+    <span class="muted">{{ remediation.closed }} of {{ remediation.total }} closed</span>
+  </div>
+  <div class="progress"><div class="bar" style="width: {{ (100 * remediation.closed / remediation.total)|round(1) if remediation.total else 0 }}%"></div></div>
+  <p class="muted small">Closed = resolved or false positive. Triaging a finding records a human
+  judgment — it never changes what the scanner measured.</p>
+</div>
 <div class="cards">
   <div class="card">
     <div class="label">Risk score</div>
@@ -124,41 +136,8 @@
   <strong>confidence</strong> = how sure the measurement is.
 </p>
 {% for f in findings %}
-<div class="finding sev-{{ f.severity }}">
-  <div class="finding-head">
-    <span class="badge sev-{{ f.severity }}">{{ f.severity }}</span>
-    <span class="conf-badge">{{ f.confidence }}</span>
-    <strong>{{ f.title }}</strong>
-  </div>
-  <div class="muted small">
-    <code>{{ f.port.asset.ip_address }}:{{ f.port.port }}</code>
-    · rule <code>{{ f.rule_id }}</code>
-    · {{ f.created_at.strftime("%Y-%m-%d %H:%M") if f.created_at else "" }}
-  </div>
-  <p>{{ f.description }}</p>
-  {% set ev = f.evidence|fromjson %}
-  {% if ev %}
-  <h4>Evidence <span class="muted">(measured, not guessed)</span></h4>
-  <dl class="evidence">
-    {% for k, v in ev.items() %}
-    <dt>{{ k.replace("_", " ") }}</dt><dd><code>{{ v }}</code></dd>
-    {% endfor %}
-  </dl>
-  {% endif %}
-  <h4>Impact</h4>
-  <p>{{ f.impact }}</p>
-  <h4>Remediation</h4>
-  <p>{{ f.remediation }}</p>
-  {% set refs = f.references|fromjson %}
-  {% if refs %}
-  <h4>References</h4>
-  <ul class="refs">
-    {% for r in refs %}
-    <li><a href="{{ r }}" target="_blank" rel="noopener">{{ r }}</a></li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-</div>
+  {% set triage_form = true %}
+  {% include "_finding_card.html" %}
 {% endfor %}
 {% else %}
 <p class="muted">

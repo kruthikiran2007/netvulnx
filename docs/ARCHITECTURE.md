@@ -1,4 +1,4 @@
-# NetVulnX Architecture (Milestone 5)
+# NetVulnX Architecture (Milestone 6)
 
 ## The big picture
 
@@ -107,9 +107,31 @@ holding measured facts plus deterministic derived flags (expired,
 self-signed). **Risk judgments are deliberately absent**: the Milestone 4
 rule engine will turn these observations into findings.
 
-## What's next (Milestone 6)
-HTML reports, remediation tracking, and scan comparison. Then Milestone 7:
-testing, hardening, documentation.
+## What's next (Milestone 7)
+Testing, hardening, documentation: the remaining required docs
+(API.md, TESTING.md, SECURITY.md, THREAT_MODEL.md, LIMITATIONS.md,
+ROADMAP.md, PROJECT_REPORT.md, LAB_SETUP.md, DEVELOPMENT.md), CSRF
+protection, production SECRET_KEY handling, and a hardening pass.
+
+## Milestone 6: reports, remediation tracking, scan comparison
+
+- **HTML reports** (`/scans/<id>/report`) — generated on demand from live
+  rows: scan summary, executive summary (risk, assets, ports, findings,
+  severity badges), full finding cards (shared `_finding_card.html`
+  include, read-only here), assets & open ports table, and a methodology &
+  limitations section. A "Print / Save as PDF" button plus `@media print`
+  CSS gives a clean PDF via the browser — no PDF library needed.
+- **Remediation tracking** — `Finding.status` (`open`/`acknowledged`/
+  `resolved`/`false_positive`, new columns via `_ensure_columns`) plus
+  `status_note`/`status_updated_at`. `POST /findings/<id>/status` triages
+  one finding; the referrer redirect is restricted to our own host
+  (open-redirect safety). Scan detail shows "x of y closed" progress;
+  the shared scan table gained an "Open" column. Triage is explicitly a
+  human judgment — it never modifies measured evidence.
+- **Scan comparison** (`/scans/compare`) — pick two completed scans;
+  `app/diff.py` (pure, unit-tested) matches findings by
+  (rule_id, IP, port) and ports by (IP, port), reporting new/gone
+  findings, opened/closed ports, and the risk delta.
 
 ## Milestone 5: dashboard, asset inventory, attack-surface view
 

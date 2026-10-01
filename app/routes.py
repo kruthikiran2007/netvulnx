@@ -14,10 +14,14 @@ from datetime import datetime, timezone
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, jsonify, abort)
 
+from sqlalchemy import func
+
 from app import db
-from app.models import Scan, Asset, Port, Finding
+from app.models import (Scan, Asset, Port, Finding, FINDING_STATUSES,
+                        CLOSED_STATUSES)
 from app.stats import (severity_counts, worst_severity, service_exposure,
                        inventory_rows, risk_history, recent_findings)
+from app.diff import compare_findings, compare_ports, summarize
 from rules import SEVERITY_RANK
 from rules.scoring import FORMULA_TEXT
 from scanner import jobs
@@ -25,6 +29,26 @@ from scanner.targets import parse_target, parse_ports, TargetError
 from config import Config
 
 bp = Blueprint("main", __name__)
+
+
+def _open_finding_counts(scan_ids):
+    """{scan_id: number of findings not yet closed} for remediation columns."""
+    if not scan_ids:
+        return {}
+    rows = (db.session.query(Finding.scan_id, func.count(Finding.id))
+            .filter(Finding.scan_id.in_(scan_ids),
+                    ~Finding.status.in_(CLOSED_STATUSES))
+            .group_by(Finding.scan_id).all())
+    return dict(rows)
+
+
+def _safe_back(fallback):
+    """Redirect back to the referring page, but only inside our own app
+    (never follow a Referer pointing elsewhere — open-redirect safety)."""
+    ref = request.referrer or ""
+    if ref.startswith(request.host_url):
+        return redirect(ref)
+    return redirect(fallback)
 
 
 @bp.get("/")
@@ -43,6 +67,7 @@ def dashboard():
         risk_history=risk_history(scans),
         recent_findings=recent_findings(findings),
         recent_scans=scans[:5],
+        open_counts=_open_finding_counts([s.id for s in scans]),
     )
 
 
@@ -131,7 +156,9 @@ def attack_surface():
 @bp.get("/scans")
 def scan_list():
     scans = Scan.query.order_by(Scan.created_at.desc()).all()
-    return render_template("scans.html", scans=scans)
+    return render_template("scans.html", scans=scans,
+                           open_counts=_open_finding_counts(
+                               [s.id for s in scans]))
 
 
 @bp.get("/scans/new")
@@ -268,5 +295,96 @@ def scan_detail(scan_id):
     sev_counts = {}
     for f in findings:
         sev_counts[f.severity] = sev_counts.get(f.severity, 0) + 1
+    closed = sum(1 for f in findings if f.status in CLOSED_STATUSES)
+    remediation = {"total": len(findings), "closed": closed,
+                   "open": len(findings) - closed}
     return render_template("scan_detail.html", scan=scan, findings=findings,
-                           sev_counts=sev_counts, formula_text=FORMULA_TEXT)
+                           sev_counts=sev_counts, formula_text=FORMULA_TEXT,
+                           remediation=remediation,
+                           finding_statuses=FINDING_STATUSES)
+
+
+@bp.post("/findings/<int:finding_id>/status")
+def finding_status(finding_id):
+    """Triage one finding: mark it acknowledged / resolved / false positive.
+
+    This is a human judgment about a measured result — it never changes
+    what the scanner observed, only how the finding is tracked.
+    """
+    finding = Finding.query.get_or_404(finding_id)
+    fallback = url_for("main.scan_detail", scan_id=finding.scan_id)
+    new_status = request.form.get("status", "")
+    if new_status not in FINDING_STATUSES:
+        flash("Unknown status — nothing changed.", "error")
+        return _safe_back(fallback)
+    finding.status = new_status
+    finding.status_note = request.form.get("note", "").strip() or None
+    finding.status_updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    flash(f"Finding marked as {new_status.replace('_', ' ')}.", "info")
+    return _safe_back(fallback)
+
+
+@bp.get("/scans/<int:scan_id>/report")
+def scan_report(scan_id):
+    """Printable assessment report, generated on demand from live data.
+
+    Use the browser's Print → Save as PDF for a PDF copy. The report says
+    when it was generated and never claims more than the data supports.
+    """
+    scan = Scan.query.get_or_404(scan_id)
+    findings = (Finding.query.filter_by(scan_id=scan_id).all())
+    findings.sort(key=lambda f: (SEVERITY_RANK.get(f.severity, 99), f.id))
+    open_ports = [p for a in scan.assets for p in a.ports]
+    open_ports.sort(key=lambda p: (p.asset.ip_address, p.port))
+    return render_template(
+        "report.html", scan=scan, findings=findings,
+        sev_counts=severity_counts(findings), formula_text=FORMULA_TEXT,
+        assets=sorted(scan.assets, key=lambda a: a.ip_address),
+        open_ports=open_ports,
+        closed=sum(1 for f in findings if f.status in CLOSED_STATUSES),
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
+@bp.get("/scans/compare")
+def scan_compare():
+    """Side-by-side diff of two completed scans: new/gone findings,
+    opened/closed ports, risk delta."""
+    completed = (Scan.query.filter_by(status="completed")
+                 .order_by(Scan.completed_at.desc()).all())
+    a_id = request.args.get("a", type=int)
+    b_id = request.args.get("b", type=int)
+    result = None
+    if a_id and b_id and a_id != b_id:
+        a = next((s for s in completed if s.id == a_id), None)
+        b = next((s for s in completed if s.id == b_id), None)
+        if a and b:
+            f_before = Finding.query.filter_by(scan_id=a.id).all()
+            f_after = Finding.query.filter_by(scan_id=b.id).all()
+            p_before = Port.query.filter_by(scan_id=a.id).all()
+            p_after = Port.query.filter_by(scan_id=b.id).all()
+            f_diff = compare_findings(f_before, f_after)
+            p_diff = compare_ports(p_before, p_after)
+
+            def _fkey(pair):
+                f = pair[1] or pair[0]
+                ip = f.asset.ip_address if f.asset else ""
+                return (SEVERITY_RANK.get(f.severity, 99),
+                        f.rule_id or "", ip)
+
+            def _pkey(pair):
+                p = pair[1] or pair[0]
+                ip = p.asset.ip_address if p.asset else ""
+                return (ip, p.port)
+
+            for key in ("new", "gone", "same"):
+                f_diff[key].sort(key=_fkey)
+            for key in ("opened", "closed", "same"):
+                p_diff[key].sort(key=_pkey)
+            result = {
+                "summary": summarize(a, b, f_diff, p_diff),
+                "findings": f_diff, "ports": p_diff,
+            }
+    return render_template("compare.html", completed=completed,
+                           a_id=a_id, b_id=b_id, result=result)

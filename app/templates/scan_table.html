@@ -6,6 +6,7 @@
       <th>Target</th>
       <th>Status</th>
       <th>Risk</th>
+      <th>Open</th>
       <th>Created</th>
       <th></th>
     </tr>
@@ -17,6 +18,7 @@
       <td><code>{{ s.target_raw }}</code></td>
       <td><span class="badge {{ s.status }}">{{ s.status.replace("_", " ") }}</span></td>
       <td>{{ s.risk_score if s.status == "completed" else "—" }}</td>
+      <td>{{ open_counts.get(s.id, 0) if open_counts is defined else "—" }}</td>
       <td class="muted">{{ s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "—" }}</td>
       <td><a href="{{ url_for('main.scan_detail', scan_id=s.id) }}">View</a></td>
     </tr>

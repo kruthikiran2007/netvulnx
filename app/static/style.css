@@ -211,3 +211,37 @@ ul.refs { margin: 6px 0; padding-left: 20px; font-size: 0.9em; }
 .port-chip.sev-low { border-color: var(--accent); color: var(--accent); }
 .port-chip.sev-info { border-color: var(--muted); color: var(--muted); }
 .surface-card .port-row { margin-top: 10px; }
+
+/* Milestone 6: remediation, reports, comparison */
+.status-badge { display: inline-block; font-size: 0.8em; border-radius: 999px;
+  padding: 1px 10px; border: 1px solid var(--border); color: var(--muted); }
+.status-badge.st-open { color: var(--red); border-color: var(--red); }
+.status-badge.st-acknowledged { color: var(--amber); border-color: var(--amber); }
+.status-badge.st-resolved { color: var(--green); border-color: var(--green); }
+.status-badge.st-false_positive { color: var(--muted); border-color: var(--muted); }
+.triage-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); }
+.triage-form select, .triage-form input[type="text"] {
+  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 8px; font-size: 0.9em; }
+.triage-form input[type="text"] { flex: 1; min-width: 180px; }
+.btn.small { padding: 4px 12px; font-size: 0.85em; }
+.triage-note { background: var(--panel-2); border-radius: 6px; padding: 8px 12px; }
+.remediation { margin: 14px 0; }
+.remediation-head { display: flex; justify-content: space-between; align-items: baseline; }
+.detail-actions { margin: 10px 0; }
+.compare-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;
+  margin: 12px 0 20px; }
+.compare-form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.9em; }
+.compare-form select { background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
+  max-width: 320px; }
+
+/* Print: clean report on paper/PDF */
+@media print {
+  .topbar nav, .report-actions, .triage-form, footer { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card, .finding { break-inside: avoid; border-color: #ccc; }
+  .finding { border-left-width: 4px; }
+  a { color: #000; text-decoration: none; }
+}

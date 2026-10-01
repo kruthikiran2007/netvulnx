@@ -4,15 +4,15 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
-> **Milestone 5 status:** dashboards are live. The home page shows real
-> aggregate stats (scans, assets, open ports, findings by severity), a risk
-> score chart per completed scan, and the latest findings. A global **asset
-> inventory** groups every observed IP across scans with first/last seen,
-> open-port union, and worst severity — each with a per-scan timeline. The
-> **attack-surface view** aggregates exposed services across completed scans
-> (charts mirror the tables) plus a per-asset port map of the latest scan.
-> Every number comes from the database; charts use Chart.js on real data.
-> Reporting and scan comparison arrive in later milestones.
+> **Milestone 6 status:** reporting and tracking are live. Every scan gets a
+> printable **HTML report** (executive summary, full findings with evidence,
+> assets & open ports, methodology and limitations — use the browser's
+> Print → Save as PDF for a PDF copy). Findings can be **triaged** (open →
+> acknowledged → resolved / false positive) with a note; triage never alters
+> the measured evidence, and scan pages show remediation progress. **Compare
+> scans** diffs two completed scans: new/gone findings, opened/closed ports,
+> and the risk-score delta. Remaining: Milestone 7 (testing, hardening,
+> documentation).
 
 ## Safety first
 
@@ -86,5 +86,5 @@ netvulnx/
 3. **HTTP/HTTPS + TLS analysis** ✅ — TLS handshake/cert/protocol analysis, HTTP redirect + security-header checks, safe DNS/SMTP/FTP service checks, TLS detection in fingerprinting
 4. **Rule engine + risk scoring + evidence** ✅ — 15 deterministic rules turn observations into findings with evidence/confidence/impact/remediation; explainable risk score; no invented findings
 5. **Dashboard, assets, attack-surface view** ✅ — real-data aggregates, risk chart, latest findings; global asset inventory with per-IP timelines; attack-surface view (service exposure + latest-scan port map); all charts mirror tables
-6. **Reports, remediation tracking, scan comparison**
+6. **Reports, remediation tracking, scan comparison** ✅ — printable HTML report per scan (browser Print → PDF); finding triage (open/acknowledged/resolved/false positive) with notes + remediation progress; scan diff (new/gone findings, opened/closed ports, risk delta)
 7. **Testing, hardening, documentation**

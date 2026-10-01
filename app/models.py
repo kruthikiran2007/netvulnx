@@ -224,3 +224,15 @@ class Finding(db.Model):
     references = db.Column(db.Text)      # JSON list of documentation URLs
 
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+    # Remediation tracking (Milestone 6). "open" until a human triages it.
+    # Closed = resolved or false_positive (see CLOSED_STATUSES below).
+    status = db.Column(db.String(20), nullable=False, default="open")
+    status_note = db.Column(db.Text)          # why it was triaged this way
+    status_updated_at = db.Column(db.DateTime)
+
+
+#: Finding lifecycle states shown in the UI.
+FINDING_STATUSES = ("open", "acknowledged", "resolved", "false_positive")
+#: Statuses that count as "done" for remediation progress.
+CLOSED_STATUSES = ("resolved", "false_positive")
