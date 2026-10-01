@@ -4,11 +4,12 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
-> **Milestone 2 status:** real port scanning is live. Authorized scans run
-> a background pipeline — host discovery → TCP connect port scan (bounded
-> thread pool) → service fingerprinting with confidence scores — with live
-> progress and per-port/service results. Scan profiles (Quick / Standard /
-> Deep / Custom) define behavior explicitly. The rule engine, risk scoring
+> **Milestone 3 status:** service analysis is live. After fingerprinting,
+> authorized scans now run read-only TLS analysis (version, cipher,
+> certificate facts, old-protocol probes), HTTP analysis (redirect chains,
+> security-header checklist, page clues), and safe service checks
+> (DNS version, SMTP EHLO/STARTTLS, FTP anonymous login) — all stored as
+> measured observations with evidence. The rule engine, risk scoring
 > and reporting arrive in later milestones.
 
 ## Safety first
@@ -71,7 +72,7 @@ netvulnx/
     └── ARCHITECTURE.md    # how the pieces fit together
 ```
 
-> **Upgrading from Milestone 1?** The database schema changed (new tables
+> **Upgrading from an earlier milestone?** The database schema changed (new tables
 > and columns). During development, delete the old database before running
 > the new code: `rm -f netvulnx.db` inside the project folder. (Proper
 > database migrations arrive in a later milestone.)
@@ -80,7 +81,7 @@ netvulnx/
 
 1. **Foundation & safety** ✅ — scaffold, DB, UI shell, authorization gate, reachability
 2. **Port scanning + fingerprinting** ✅ — real TCP connect scan, banner grabbing, service ID with confidence, background jobs, scan profiles
-3. **HTTP/HTTPS + TLS analysis** — headers, redirects, certificates, TLS config
+3. **HTTP/HTTPS + TLS analysis** ✅ — TLS handshake/cert/protocol analysis, HTTP redirect + security-header checks, safe DNS/SMTP/FTP service checks, TLS detection in fingerprinting
 4. **Rule engine + risk scoring + evidence** — the custom detection differentiator
 5. **Dashboard, assets, attack-surface view** — all from real data
 6. **Reports, remediation tracking, scan comparison**

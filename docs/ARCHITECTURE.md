@@ -1,4 +1,4 @@
-# NetVulnX Architecture (Milestone 2)
+# NetVulnX Architecture (Milestone 3)
 
 ## The big picture
 
@@ -73,9 +73,43 @@ scanner/targets.py  validate target + enforce scope (tested, unchanged role)
   between phases and port chunks; per-host commits keep partial results;
   `try/except/finally` guarantees no scan stays `running` forever.
 
-## What's next (Milestone 3)
+## Milestone 3: service analysis (what's new)
 
-TLS/SSL analysis (certificate validity, protocol/cipher inspection —
-read-only handshakes), HTTP security header checks, and service-level
-observations feeding the finding pipeline. The rule engine, risk scoring,
-and reporting arrive in Milestone 4.
+After fingerprinting, the engine runs **Phase 3b — read-only service
+analysis** per open port (`_analyze_service` in `scanner/engine.py`):
+
+- **`scanner/tlscheck.py`** — TLS handshake inspection: negotiated version
+  and cipher, weak-cipher flagging (by construction, deterministic), old
+  protocol probes (TLS 1.0/1.1/1.2), certificate facts (subject, issuer,
+  SANs, expiry, self-signed, hostname match). We deliberately do NOT verify
+  the cert (`CERT_NONE`) — a scanner that refused untrusted certs could never
+  report "expired / self-signed". We inspect; we don't trust. (One stdlib
+  quirk documented in the code: with `CERT_NONE`, `getpeercert()` returns
+  `{}`, so we decode the always-available binary form instead.)
+- **`scanner/httpcheck.py`** — one careful `GET /` per web service using
+  `http.client` directly (no auto-redirects, no cookies): manually-followed
+  redirect chain (max 5), Server/X-Powered-By headers, security-header
+  presence checklist (HSTS, CSP, X-Frame-Options, ...), http→https upgrade
+  observation, directory-listing and default-page clues from a small
+  body sniff (32 KB max).
+- **`scanner/servicecheck.py`** — safe service-specific observations:
+  DNS `version.bind` (CHAOS TXT over TCP), SMTP `EHLO` extensions +
+  STARTTLS advertisement (we do NOT test open relay), FTP anonymous login
+  attempt (`USER anonymous`, then `QUIT` — no listing, no download).
+- **Fingerprinting learned TLS**: a TLS service answers no plaintext probe,
+  so `fingerprint.py` now attempts one light read-only handshake (single,
+  no protocol probes) and reports `https` at 90% confidence on any port.
+  (This also fixed a real M2 bug: SMTP's `220` greeting was misidentified
+  as FTP because both protocols greet with 220.)
+
+Results land in three new tables — `TlsInfo`, `HttpInfo`, `ServiceCheck` —
+holding measured facts plus deterministic derived flags (expired,
+self-signed). **Risk judgments are deliberately absent**: the Milestone 4
+rule engine will turn these observations into findings.
+
+## What's next (Milestone 4)
+The rule engine, risk scoring, and reporting. Milestone 3 stored only
+measured observations (TlsInfo / HttpInfo / ServiceCheck rows) — Milestone 4
+turns those deterministic facts into findings with severity, evidence,
+confidence, and remediation guidance. No AI invents findings; rules match
+on the stored observations.

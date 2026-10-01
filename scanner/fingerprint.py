@@ -8,6 +8,8 @@ So we identify services from actual protocol behavior:
   2. ACTIVE probe: if nothing greeted us, send a minimal, benign HTTP
      request. A web server will answer; anything else will hang up or
      send garbage — both are informative.
+  2b. TLS handshake attempt: a TLS service answers neither of the above
+     with plaintext, so try one real (read-only) TLS handshake.
   3. PORT HINT: if all else fails, guess from the well-known port number —
      clearly labeled as unverified.
 
@@ -24,6 +26,8 @@ never brute-force, never exploit.
 """
 import re
 import socket
+
+from scanner import tlscheck
 
 BANNER_MAX = 500  # store at most this many banner characters
 
@@ -87,7 +91,11 @@ def _parse_ssh(banner: str):
 
 def _parse_ftp(banner: str):
     # FTP servers greet like:  220 (vsFTPd 3.0.3)
+    # NOTE: SMTP servers also greet with 220 — if the banner carries SMTP
+    # markers, this is NOT ftp; let the SMTP parser claim it.
     if not re.match(r"220[ -]", banner):
+        return None
+    if re.search(r"smtp|esmtp|postfix|sendmail|exim", banner, re.I):
         return None
     product, version = None, None
     for name in ("vsftpd", "ProFTPD", "FileZilla", "Pure-FTPd", "Microsoft FTP"):
@@ -168,6 +176,18 @@ def fingerprint(ip: str, port: int, timeout: float = 3.0) -> dict:
                     "banner": (banner or resp.strip())[:BANNER_MAX],
                     "method": hit["method"] + " via active probe"})
         return hit
+
+    # 2b) TLS handshake attempt — a TLS service won't answer the plaintext
+    #     probes above, so try one real (read-only) handshake. Light mode:
+    #     single handshake, no old-protocol probes (the engine runs the full
+    #     TLS analysis later if this hits).
+    tls = tlscheck.analyze_tls(ip, port, timeout=timeout, light=True)
+    if not tls.get("error"):
+        subject = tls.get("cert_subject") or "unknown subject"
+        return {"port": port, "service": "https", "product": None,
+                "version": tls.get("tls_version"), "confidence": 90,
+                "method": f"TLS handshake completed ({tls.get('tls_version')})",
+                "banner": f"cert: {subject}"[:BANNER_MAX]}
 
     # 3) Port-number hint — explicitly unverified.
     hint = _PORT_HINTS.get(port)

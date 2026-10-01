@@ -26,6 +26,19 @@ def create_app(config_class=None):
     from app import routes
     app.register_blueprint(routes.bp)
 
+    # Template filter: parse JSON stored in text columns (redirect chains,
+    # header lists, check details) back into lists/dicts for rendering.
+    import json as _json
+
+    @app.template_filter("fromjson")
+    def _fromjson(value):
+        if not value:
+            return None
+        try:
+            return _json.loads(value)
+        except (TypeError, ValueError):
+            return None
+
     # Create database tables on first run. (Later milestones will switch to
     # proper database migrations; create_all is fine while the schema is young.)
     with app.app_context():

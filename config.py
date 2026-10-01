@@ -39,6 +39,11 @@ class Config:
     DISCOVERY_TIMEOUT = 1.0  # per-port timeout during host discovery
     BANNER_TIMEOUT = 3.0     # seconds to wait for a service banner
 
+    # --- Service analysis settings (Milestone 3) ---
+    TLS_TIMEOUT = 5.0            # seconds for a TLS handshake
+    HTTP_TIMEOUT = 5.0           # seconds for an HTTP request
+    SERVICE_CHECK_TIMEOUT = 5.0  # seconds for DNS/SMTP/FTP checks
+
     # --- Scan profiles: each has clearly defined behavior ---
     SCAN_PROFILES = {
         "quick": {

@@ -151,3 +151,21 @@ tbody tr:hover { background: var(--panel); }
   background: var(--panel-2); padding: 1px 8px; border-radius: 999px; }
 .hint-inline { color: var(--muted); font-size: 0.85em; font-weight: 400; }
 .banner code { font-size: 0.82em; color: var(--muted); }
+
+/* Service analysis (Milestone 3) */
+.analysis { background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px 18px 12px; margin: 14px 0; }
+.analysis h3 { margin: 12px 0 6px; }
+.analysis h4 { margin: 14px 0 6px; color: var(--accent); font-size: 0.95em;
+  text-transform: uppercase; letter-spacing: 0.04em; }
+table.kv { width: 100%; border-collapse: collapse; margin: 4px 0; }
+table.kv th { text-align: left; vertical-align: top; width: 150px;
+  color: var(--muted); font-weight: 600; padding: 5px 10px 5px 0; font-size: 0.9em; }
+table.kv td { padding: 5px 0; font-size: 0.9em; }
+.hdr-present { display: inline-block; color: var(--green); border: 1px solid var(--green);
+  border-radius: 4px; padding: 1px 8px; margin: 1px 4px 1px 0; font-size: 0.85em; }
+.hdr-missing { display: inline-block; color: var(--muted); border: 1px dashed var(--muted);
+  border-radius: 4px; padding: 1px 8px; margin: 1px 4px 1px 0; font-size: 0.85em; }
+.analysis details summary { cursor: pointer; }
+.analysis pre { background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 12px; font-size: 0.8em; overflow-x: auto; max-height: 220px; }

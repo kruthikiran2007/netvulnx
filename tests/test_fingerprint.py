@@ -144,3 +144,64 @@ def test_banner_truncated_for_storage():
         assert fp["service"] == "ssh"  # still identified despite truncation
     finally:
         srv.shutdown()
+
+
+def test_tls_service_detected_via_handshake(tmp_path):
+    """A TLS service on a non-standard port answers no plaintext probe;
+    fingerprinting should still identify it via one real handshake."""
+    import ssl
+    import subprocess
+
+    cert = tmp_path / "c.pem"
+    key = tmp_path / "k.pem"
+    subprocess.run([
+        "openssl", "req", "-x509", "-newkey", "rsa:2048",
+        "-keyout", str(key), "-out", str(cert), "-days", "2", "-nodes",
+        "-subj", "/CN=fp-test", "-addext", "subjectAltName=IP:127.0.0.1",
+    ], check=True, capture_output=True)
+
+    class _TLSHandler(socketserver.BaseRequestHandler):
+        def handle(self):
+            try:
+                self.request.recv(1024)
+            except OSError:
+                pass
+
+    class _TLSServer(socketserver.TCPServer):
+        allow_reuse_address = True
+
+        def get_request(self):
+            sock, addr = super().get_request()
+            return self._ctx.wrap_socket(sock, server_side=True), addr
+
+    srv = _TLSServer(("127.0.0.1", 0), _TLSHandler)
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ctx.load_cert_chain(str(cert), str(key))
+    srv._ctx = ctx
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        fp = fingerprint.fingerprint("127.0.0.1", _port(srv))
+        assert fp["service"] == "https", fp
+        assert fp["confidence"] >= 85
+        assert "TLS handshake" in fp["method"]
+        assert "fp-test" in fp["banner"]
+    finally:
+        srv.shutdown()
+
+
+def test_smtp_banner_not_misidentified_as_ftp():
+    """Regression: SMTP also greets with 220 — the FTP parser must yield."""
+
+    class _SMTPBanner(socketserver.BaseRequestHandler):
+        def handle(self):
+            self.request.sendall(b"220 fake.mail ESMTP Postfix 3.7.2\r\n")
+            time.sleep(0.3)
+
+    srv = _serve(_SMTPBanner)
+    try:
+        fp = fingerprint.fingerprint("127.0.0.1", _port(srv))
+        assert fp["service"] == "smtp", fp
+        assert fp["product"] == "Postfix"
+    finally:
+        srv.shutdown()

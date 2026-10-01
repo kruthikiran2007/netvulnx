@@ -14,17 +14,169 @@ Safety properties:
   - never leaves a scan stuck in "running" (try/except/finally)
   - commits per host, so a crash keeps partial results instead of nothing
 """
+"""Scan orchestrator — runs the full assessment pipeline for one scan.
+
+Pipeline per host:
+    1. Host discovery  (quick "is anything there?" via reachability)
+    2. Port scan       (bounded thread-pool connect scan)
+    3. Fingerprinting  (banner grab + protocol parsers on open ports)
+    3b. Service analysis (TLS / HTTP / DNS / SMTP / FTP — read-only)
+    4. Storage         (Asset + Port + analysis rows, real progress updates)
+
+Runs on a background thread (see scanner/jobs.py). Progress is REAL:
+hosts completed / total hosts, with per-host detail in current_stage.
+
+Safety properties:
+  - checks the cancel event between every phase and chunk
+  - never leaves a scan stuck in "running" (try/except/finally)
+  - commits per host, so a crash keeps partial results instead of nothing
+"""
+import json
 from datetime import datetime, timezone
 
 from app import db
-from app.models import Scan, Asset, Port
+from app.models import Scan, Asset, Port, TlsInfo, HttpInfo, ServiceCheck
 from scanner import jobs, reachability, portscan, fingerprint
+from scanner import tlscheck, httpcheck, servicecheck
 from scanner.targets import parse_target, parse_ports
 from config import Config
 
 
 def _utcnow():
     return datetime.now(timezone.utc)
+
+
+def run_scan(app, scan_id: int, cancel_event):
+    """Thread entry point. Wraps _run with app context + guaranteed cleanup."""
+    with app.app_context():
+        try:
+            _run(scan_id, cancel_event)
+        except Exception as exc:  # last resort: record failure, never hang
+            scan = db.session.get(Scan, scan_id)
+            if scan is not None and scan.status == "running":
+                scan.status = "failed"
+                scan.error = f"{type(exc).__name__}: {exc}"
+                db.session.commit()
+        finally:
+            jobs._finish_job(scan_id)
+
+
+def _cancelled(scan, cancel_event) -> bool:
+    if cancel_event.is_set():
+        scan.status = "cancelled"
+        scan.current_stage = "Cancelled by user"
+        scan.completed_at = _utcnow()
+        db.session.commit()
+        return True
+    return False
+
+
+# Ports where we attempt TLS analysis even if fingerprinting couldn't
+# confirm HTTPS (a TLS service won't answer our plaintext HTTP probe).
+_TLS_PORTS = {443, 8443}
+# Ports where we attempt plain HTTP analysis on an unidentified service.
+_HTTP_PORTS = {80, 8080, 8000, 8888}
+
+
+def _wants_tls(service: str, port: int) -> bool:
+    return service == "https" or (port in _TLS_PORTS and service in ("unknown", "http"))
+
+
+def _wants_http(service: str, port: int) -> bool:
+    return service in ("http", "https") or (port in _HTTP_PORTS and service == "unknown")
+
+
+def _analyze_service(scan, ip: str, port_num: int, service: str, port_row: Port,
+                     cancel_event) -> bool:
+    """Phase 3b: read-only TLS/HTTP/service checks for one open port.
+
+    Returns False if cancelled mid-way (caller should stop the scan).
+    Every check is time-boxed and read-only; failures are stored as
+    errors on the row, never raised.
+    """
+    sni_name = scan.target_raw if scan.target_type == "hostname" else None
+
+    if _wants_tls(service, port_num):
+        if cancel_event.is_set():
+            return False
+        scan.current_stage = f"TLS analysis {ip}:{port_num}"
+        db.session.commit()
+        tls = tlscheck.analyze_tls(ip, port_num, timeout=Config.TLS_TIMEOUT,
+                                   server_name=sni_name, check_name=ip)
+        not_after = None
+        if tls.get("cert_not_after"):
+            not_after = datetime.fromisoformat(tls["cert_not_after"])
+        db.session.add(TlsInfo(
+            port_id=port_row.id,
+            tls_version=tls.get("tls_version"),
+            cipher_name=tls.get("cipher_name"),
+            cipher_bits=tls.get("cipher_bits"),
+            weak_cipher=tls.get("weak_cipher"),
+            supports_tls10=tls.get("supports_tls10"),
+            supports_tls11=tls.get("supports_tls11"),
+            supports_tls12=tls.get("supports_tls12"),
+            cert_subject=tls.get("cert_subject"),
+            cert_issuer=tls.get("cert_issuer"),
+            cert_sans=",".join(tls.get("cert_sans") or []),
+            cert_not_after=not_after,
+            cert_expired=tls.get("cert_expired"),
+            cert_self_signed=tls.get("cert_self_signed"),
+            hostname_mismatch=tls.get("hostname_mismatch"),
+            error=tls.get("error"),
+        ))
+
+    if _wants_http(service, port_num):
+        if cancel_event.is_set():
+            return False
+        scan.current_stage = f"HTTP analysis {ip}:{port_num}"
+        db.session.commit()
+        use_tls = service == "https" or port_num in _TLS_PORTS
+        http = httpcheck.analyze_http(ip, port_num, use_tls=use_tls,
+                                      timeout=Config.HTTP_TIMEOUT)
+        db.session.add(HttpInfo(
+            port_id=port_row.id,
+            scheme="https" if use_tls else "http",
+            final_url=http.get("final_url"),
+            status_code=http.get("status_code"),
+            redirect_chain=json.dumps(http.get("redirect_chain") or []),
+            server_header=http.get("server_header"),
+            powered_by=http.get("powered_by"),
+            present_security_headers=json.dumps(http.get("security_headers") or {}),
+            missing_security_headers=json.dumps(http.get("missing_security_headers") or []),
+            redirects_to_https=http.get("redirects_to_https"),
+            page_title=http.get("page_title"),
+            directory_listing=http.get("directory_listing"),
+            default_page=http.get("default_page"),
+            error=http.get("error"),
+        ))
+
+    # Named service-specific checks: (service or port) -> (check_type, fn)
+    extra_checks = []
+    if service == "ftp" or port_num == 21:
+        extra_checks.append(("ftp_anonymous", servicecheck.check_ftp_anonymous))
+    if service == "smtp" or port_num in (25, 587):
+        extra_checks.append(("smtp_ehlo", servicecheck.check_smtp))
+    if service == "dns" or port_num == 53:
+        extra_checks.append(("dns_version", servicecheck.check_dns_version))
+
+    for check_type, fn in extra_checks:
+        if cancel_event.is_set():
+            return False
+        scan.current_stage = f"Service check {check_type} {ip}:{port_num}"
+        db.session.commit()
+        try:
+            res = fn(ip, port_num, timeout=Config.SERVICE_CHECK_TIMEOUT)
+        except Exception as exc:  # belt and braces: record, don't crash
+            res = {"error": f"{type(exc).__name__}: {exc}"}
+        summary = res.pop("summary", None) or res.get("note") or res.get("error") or "checked"
+        db.session.add(ServiceCheck(
+            port_id=port_row.id,
+            check_type=check_type,
+            summary=summary[:255],
+            details=json.dumps(res, default=str),
+        ))
+
+    return True
 
 
 def run_scan(app, scan_id: int, cancel_event):
@@ -130,7 +282,7 @@ def _run(scan_id: int, cancel_event):
                                   f"({j + 1}/{len(open_ports)})")
             fp = fingerprint.fingerprint(ip, port,
                                          timeout=Config.BANNER_TIMEOUT)
-            db.session.add(Port(
+            port_row = Port(
                 scan_id=scan.id,
                 asset_id=asset.id,
                 port=port,
@@ -142,7 +294,16 @@ def _run(scan_id: int, cancel_event):
                 version=fp["version"],
                 banner=fp["banner"],
                 method=fp["method"],
-            ))
+            )
+            db.session.add(port_row)
+            db.session.flush()  # assign port_row.id for the analysis rows
+
+            # ---- Phase 3b: read-only service analysis ----
+            if not _analyze_service(scan, ip, port, fp["service"],
+                                    port_row, cancel_event):
+                _cancelled(scan, cancel_event)
+                return
+            db.session.commit()
 
         # ---- Phase 4: commit this host, advance real progress ----
         scan.progress = int((i + 1) / total_hosts * 100)

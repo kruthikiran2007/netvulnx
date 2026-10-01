@@ -100,6 +100,103 @@
   <p class="muted">No open ports found{% if scan.status == "completed" %} — nothing is listening on the scanned ports.{% else %} yet.{% endif %}</p>
 {% endif %}
 
+{% set ns2 = namespace(found=false) %}
+{% for a in scan.assets %}
+  {% for p in a.ports %}
+    {% if p.tls_info or p.http_info or p.service_checks %}
+      {% set ns2.found = true %}
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+{% if ns2.found %}
+<h2>Service analysis</h2>
+<p class="muted">
+  Read-only observations from TLS, HTTP, and service-specific checks.
+  These are measured facts with evidence — risk judgments come later,
+  in the findings engine (Milestone&nbsp;4).
+</p>
+{% for a in scan.assets %}
+  {% for p in a.ports %}
+    {% if p.tls_info or p.http_info or p.service_checks %}
+    <div class="analysis">
+      <h3><code>{{ a.ip_address }}:{{ p.port }}</code> <span class="muted">({{ p.service }})</span></h3>
+
+      {% if p.tls_info %}
+      {% set t = p.tls_info %}
+      <h4>TLS</h4>
+      {% if t.error %}
+        <p class="muted">{{ t.error }}</p>
+      {% else %}
+        <table class="kv">
+          <tr><th>Negotiated</th><td><code>{{ t.tls_version }}</code> · <code>{{ t.cipher_name }}</code> ({{ t.cipher_bits }}-bit)
+            {% if t.weak_cipher %}<span class="badge failed">weak cipher</span>{% endif %}</td></tr>
+          <tr><th>Old protocols</th><td>
+            TLS 1.0 {% if t.supports_tls10 %}<span class="badge failed">accepted</span>{% else %}<span class="badge completed">refused</span>{% endif %}
+            TLS 1.1 {% if t.supports_tls11 %}<span class="badge failed">accepted</span>{% else %}<span class="badge completed">refused</span>{% endif %}
+            TLS 1.2 {% if t.supports_tls12 %}<span class="badge completed">accepted</span>{% else %}<span class="badge failed">refused</span>{% endif %}
+          </td></tr>
+          <tr><th>Certificate</th><td>
+            <code>{{ t.cert_subject }}</code><br>
+            <span class="muted">issued by {{ t.cert_issuer }} · valid until {{ t.cert_not_after.strftime("%Y-%m-%d") if t.cert_not_after else "unknown" }}</span>
+            {% if t.cert_expired %}<span class="badge failed">expired</span>{% endif %}
+            {% if t.cert_self_signed %}<span class="badge interrupted">self-signed</span>{% endif %}
+            {% if t.hostname_mismatch %}<span class="badge failed">doesn't cover target</span>{% endif %}
+          </td></tr>
+          {% if t.cert_sans %}<tr><th>SANs</th><td><code>{{ t.cert_sans }}</code></td></tr>{% endif %}
+        </table>
+      {% endif %}
+      {% endif %}
+
+      {% if p.http_info %}
+      {% set h = p.http_info %}
+      <h4>HTTP{{ "S" if h.scheme == "https" else "" }}</h4>
+      {% if h.error and not h.final_url %}
+        <p class="muted">{{ h.error }}</p>
+      {% else %}
+        <table class="kv">
+          <tr><th>Final URL</th><td><code>{{ h.final_url }}</code> <span class="muted">(HTTP {{ h.status_code }})</span></td></tr>
+          {% if h.server_header %}<tr><th>Server</th><td><code>{{ h.server_header }}</code>{% if h.powered_by %} · <code>{{ h.powered_by }}</code>{% endif %}</td></tr>{% endif %}
+          <tr><th>Security headers</th><td>
+            {% for name, value in (h.present_security_headers|fromjson or {}).items() %}
+              <span class="hdr-present" title="{{ value }}">✓ {{ name }}</span>
+            {% endfor %}
+            {% for name in (h.missing_security_headers|fromjson or []) %}
+              <span class="hdr-missing">✗ {{ name }} missing</span>
+            {% endfor %}
+          </td></tr>
+          {% set chain = h.redirect_chain|fromjson or [] %}
+          {% if chain|length > 1 %}
+          <tr><th>Redirects</th><td>
+            {% for hop in chain %}<code>{{ hop.status }}</code> {{ hop.url }}{% if hop.location %} →{% endif %}<br>{% endfor %}
+            {% if h.redirects_to_https %}<span class="badge completed">upgrades to HTTPS</span>{% endif %}
+          </td></tr>
+          {% endif %}
+          {% if h.page_title %}<tr><th>Page title</th><td><code>{{ h.page_title }}</code></td></tr>{% endif %}
+          {% if h.directory_listing %}<tr><th>Note</th><td><span class="badge interrupted">directory listing enabled</span></td></tr>{% endif %}
+          {% if h.default_page %}<tr><th>Note</th><td><span class="badge interrupted">{{ h.default_page }}</span></td></tr>{% endif %}
+        </table>
+      {% endif %}
+      {% endif %}
+
+      {% if p.service_checks %}
+      <h4>Service checks</h4>
+      <table class="kv">
+        {% for c in p.service_checks %}
+        <tr><th><code>{{ c.check_type }}</code></th><td>{{ c.summary }}
+          {% set d = c.details|fromjson %}
+          {% if d %}
+          <details><summary class="muted">evidence</summary><pre>{{ d | tojson(indent=1) }}</pre></details>
+          {% endif %}
+        </td></tr>
+        {% endfor %}
+      </table>
+      {% endif %}
+    </div>
+    {% endif %}
+  {% endfor %}
+{% endfor %}
+{% endif %}
+
 <p><a href="{{ url_for('main.scan_list') }}">← Back to scans</a></p>
 {% endblock %}
 
