@@ -1,74 +1,106 @@
-# NetVulnX — Custom Network Vulnerability Scanner & Risk Assessment Platform
+# NetVulnX — Network Vulnerability Scanner & Risk Assessment Platform
 
-A realistic, safe-by-design network vulnerability assessment tool for
-**authorized** environments: your own machines, lab VMs, and private networks
-you have permission to test.
+![tests](https://img.shields.io/badge/tests-158%20passing-brightgreen)
+![python](https://img.shields.io/badge/python-3.10%2B-blue)
+![docker](https://img.shields.io/badge/docker-ready-blue)
+![license](https://img.shields.io/badge/license-MIT-green)
 
-> **Milestone 17 status:** complete. Phase 3 is done: **login hardening**
-> (Milestone 13 — brute-force lockout, password change, secure cookies),
-> **API tokens** (Milestone 14 — Bearer auth for `/api/*`), **team roles**
-> (Milestone 15 — viewer/operator/admin RBAC + user management),
-> **webhook notifications** (Milestone 16 — drift alerts on scheduled runs),
-> and **deployment** (Milestone 17 — Dockerfile, compose, HTTPS recipe).
-> All quality gates pass — **149 unit tests**.
+A **real, safe-by-design network vulnerability assessment platform** for
+authorized environments — your own machines, lab VMs, and private networks
+you have permission to test. Not a port-scan wrapper: NetVulnX fingerprints
+services, analyzes TLS/HTTP/SSH posture, maps CVEs, scores risk
+explainably, tracks remediation, and watches for drift on a schedule.
 
-> **Milestone 12 status:** complete. Phase 2 is done: **scheduled scans**
-> (Milestone 10 — recurring daily/weekly scans with drift alerts),
-> **CSV/JSON exports** (Milestone 11), and **Alembic migrations**
-> (Milestone 12 — versioned, reversible schema changes; pre-Alembic
-> databases are stamped, never replayed). All quality gates pass —
-> **130 unit tests**.
+## Screenshots
 
-> **Milestone 9 status:** complete. CVE mapping is in: when the scanner
-> identifies a product *and* version (e.g. `Apache 2.4.1`), NetVulnX looks
-> up real CVEs from the NVD, caches them (7-day TTL), and adds one finding
-> per CVE — severity from the CVSS score, confidence "likely" (banner→CPE
-> matching is heuristic), capped at 10 per service. No network → no CVE
-> findings, never fake ones. All quality gates pass — **113 unit tests**,
-> plus a live end-to-end scan against a fake Apache/2.4.1 that produced 10
-> real CVE findings. See `docs/CVE_MAPPING.md`.
+> Screenshots coming from a live run — drop them in `docs/screenshots/`.
 
-> **Milestone 8 status:** complete. Authentication is in: first-run admin
-> setup, login/logout with salted password hashing (Werkzeug scrypt), a
-> login gate on every page, and an append-only audit log (logins, scans,
-> triage) with an admin viewer. The dev server is replaced by **waitress**
-> (production-grade, Windows-friendly); `NETVULNX_DEBUG=1` still gives the
-> Flask dev server. All quality gates pass — **100 unit tests + 11
-> end-to-end checks** (real login flow + scan against a live server).
+| Dashboard | Scan findings | Printable report |
+|---|---|---|
+| `docs/screenshots/dashboard.png` | `docs/screenshots/findings.png` | `docs/screenshots/report.png` |
+
+## What it does
+
+**Scanning**
+- TCP connect port scanning with bounded parallelism and scan profiles
+  (quick / standard / custom), plus banner grabbing and service
+  fingerprinting with confidence levels
+- TLS analysis: certificate validity/expiry/hostname, protocol and cipher
+  grading, self-signed detection
+- HTTP analysis: security headers, HTTPS redirects, default pages,
+  directory listings
+- **SSH algorithm audit** — performs the real SSH handshake (KEXINIT) and
+  grades key exchange, host-key, cipher and MAC algorithms, with exact
+  `sshd_config` remediation. No login attempted, ever
+- Safe service checks: DNS version, SMTP STARTTLS/EHLO, FTP anonymous login
+- CVE mapping: product+version → real NVD lookups with CVSS-based severity
+  (7-day cache, honest "likely" confidence — never fabricated)
+
+**Assessment workflow**
+- Deterministic rule engine: every finding carries measured evidence,
+  confidence, impact, remediation and references
+- Explainable risk scoring — no black-box numbers
+- Finding triage (open / acknowledged / resolved / false positive) with
+  notes, remediation progress tracking, and scan-to-scan diff
+  (new/gone findings, opened/closed ports, risk delta)
+- Printable HTML reports (browser Print → PDF), CSV/JSON exports
+
+**Team & operations**
+- Authentication with brute-force lockout, password change, and secure
+  session cookies; viewer / operator / admin roles with user management
+- API tokens (Bearer auth) for `/api/*`, append-only audit log
+- Scheduled daily/weekly scans with drift alerts via webhooks
+- Alembic database migrations, Docker + Docker Compose deployment,
+  HTTPS reverse-proxy recipe
+
+## What makes it different
+
+1. **Honest by architecture.** An open port is an observation, not a
+   vulnerability. Every finding must have measured evidence — the engine
+   literally cannot invent results.
+2. **SSH crypto auditing.** Most scanners read the SSH banner and stop.
+   NetVulnX completes the handshake and grades the actual cryptography.
+3. **Explainable risk.** The risk score is a documented formula over
+   finding severities, not a black box.
+4. **Safety is a feature.** Target scope validation, an explicit
+   authorization gate before any packet is sent, no brute force, no
+   exploitation, no DoS — enforced in code and tested (158 unit tests).
 
 ## Safety first
 
 - Only `127.0.0.1` / `::1` and private addresses (`10.x`, `172.16–31.x`,
   `192.168.x`) are scannable by default. Public IPs are rejected unless
   explicitly opted in via `config.py` (`ALLOW_PUBLIC_TARGETS`).
-- Every scan requires explicit authorization confirmation before any packet
-  is sent. The confirmation is stored with the scan record.
-- No brute force, no exploitation, no DoS, no stealth/evasion — by design.
+- Every scan requires explicit authorization confirmation before any
+  packet is sent. The confirmation is stored with the scan record.
+- Scan only systems you own or have written permission to test.
 
-## Setup
+## Quickstart
 
 You need Python 3.10+.
 
 ```bash
-# 1. Create an isolated Python environment for this project
+# 1. Create an isolated Python environment
 python3 -m venv venv
 
-# 2. Activate it (your shell prompt will show "(venv)")
-source venv/bin/activate
+# 2. Activate it
+source venv/bin/activate        # Windows: .\venv\Scripts\Activate.ps1
 
-# 3. Install dependencies (Flask, SQLAlchemy, pytest)
+# 3. Install dependencies
 pip install -r requirements.txt
 
 # 4. Run the tests
-python -m pytest tests/ -v
+python -m pytest tests/ -q
 
 # 5. Start the app
 python run.py
 ```
 
-Then open **http://127.0.0.1:5000** in your browser.
+Then open **http://127.0.0.1:5000** — create your admin account on the
+first-run setup page, and try a scan: target `127.0.0.1`, ports `80,443,22`.
 
-Try a first scan: target `127.0.0.1`, ports `80,443,22`.
+Prefer Docker? See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the
+Compose quickstart and the HTTPS reverse-proxy recipe.
 
 ## Project layout
 
@@ -77,37 +109,42 @@ netvulnx/
 ├── run.py                 # start the app: `python run.py`
 ├── config.py              # all settings in one place (safety controls live here)
 ├── requirements.txt       # Python dependencies
-├── app/
-│   ├── __init__.py        # Flask app factory (builds the app)
-│   ├── models.py          # database tables: Scan, Asset, Port
-│   ├── routes.py          # web pages: dashboard, scans, authorization gate, status API
-│   ├── templates/         # HTML pages (rendered from real DB data)
-│   └── static/style.css   # dark console theme
-├── scanner/
-│   ├── targets.py         # target parsing + scope validation (with tests)
-│   ├── reachability.py    # host discovery — Phase 1 of a scan
-│   ├── portscan.py        # TCP connect scan, bounded thread pool — Phase 2
-│   ├── fingerprint.py     # banner grab + service ID with confidence — Phase 3
-│   ├── engine.py          # scan orchestrator (background worker) — Phase 4
-│   └── jobs.py            # job start / cancel / crash recovery
-├── rules/                 # deterministic rule engine (Milestone 4)
-├── tests/                 # pytest unit tests
-└── docs/
-    └── ARCHITECTURE.md    # how the pieces fit together
+├── Dockerfile / docker-compose.yml
+├── app/                   # Flask app: routes, models, templates, audit, auth
+├── scanner/               # scan engine: targets, reachability, portscan,
+│                          #   fingerprinting, TLS/HTTP/SSH/service checks,
+│                          #   CVE lookup, scheduling, webhooks
+├── rules/                 # deterministic rule engine (TLS/HTTP/service/
+│                          #   CVE/SSH rules + risk scoring)
+├── migrations/            # Alembic versioned schema migrations
+├── tests/                 # 158 pytest unit tests
+└── docs/                  # architecture, testing, security, deployment…
 ```
-
-> **Upgrading from an earlier milestone?** The database schema changed (new tables
-> and columns). During development, delete the old database before running
-> the new code: `rm -f netvulnx.db` inside the project folder. (Proper
-> database migrations arrive in a later milestone.)
 
 ## Milestones
 
-1. **Foundation & safety** ✅ — scaffold, DB, UI shell, authorization gate, reachability
-2. **Port scanning + fingerprinting** ✅ — real TCP connect scan, banner grabbing, service ID with confidence, background jobs, scan profiles
-3. **HTTP/HTTPS + TLS analysis** ✅ — TLS handshake/cert/protocol analysis, HTTP redirect + security-header checks, safe DNS/SMTP/FTP service checks, SSH algorithm audit (KEXINIT handshake, weak kex/host-key/cipher/MAC detection), TLS detection in fingerprinting
-4. **Rule engine + risk scoring + evidence** ✅ — 15 deterministic rules turn observations into findings with evidence/confidence/impact/remediation; explainable risk score; no invented findings
-5. **Dashboard, assets, attack-surface view** ✅ — real-data aggregates, risk chart, latest findings; global asset inventory with per-IP timelines; attack-surface view (service exposure + latest-scan port map); all charts mirror tables
-6. **Reports, remediation tracking, scan comparison** ✅ — printable HTML report per scan (browser Print → PDF); finding triage (open/acknowledged/resolved/false positive) with notes + remediation progress; scan diff (new/gone findings, opened/closed ports, risk delta)
-7. **Testing, hardening, documentation** ✅ — 89 unit tests + 27 end-to-end checks; CSRF protection, security headers, hardened session cookies, secret-key hygiene; full doc set (API, TESTING, SECURITY, THREAT_MODEL, LIMITATIONS, ROADMAP, LAB_SETUP, DEVELOPMENT, PROJECT_REPORT)
-8. **Authentication + production server** ✅ — first-run admin setup, login/logout with salted password hashing, login gate on all routes, append-only audit log with admin viewer; waitress production server (`NETVULNX_DEBUG=1` for Flask dev server); 100 unit tests + 11 end-to-end checks
+| # | Milestone | # | Milestone |
+|---|---|---|---|
+| 1 | Foundation & safety gate | 10 | Scheduled scans + drift alerts |
+| 2 | Port scanning + fingerprinting | 11 | CSV/JSON exports |
+| 3 | TLS/HTTP analysis | 12 | Alembic migrations |
+| 4 | Rule engine + risk scoring | 13 | Login hardening |
+| 5 | Dashboard + attack-surface view | 14 | API tokens |
+| 6 | Reports + triage + scan diff | 15 | Team roles (RBAC) |
+| 7 | Testing + hardening + docs | 16 | Webhook notifications |
+| 8 | Authentication + prod server | 17 | Docker deployment |
+| 9 | CVE mapping (NVD) | 18 | SSH algorithm analyzer |
+
+## Documentation
+
+- [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — using the app day to day
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Docker, HTTPS, production checklist
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — how the pieces fit together
+- [`docs/SECURITY.md`](docs/SECURITY.md) / [`docs/THREAT_MODEL.md`](docs/THREAT_MODEL.md) — security design
+- [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) — honest scope boundaries
+- [`docs/PROJECT_REPORT.md`](docs/PROJECT_REPORT.md) — full project write-up
+- [`docs/API.md`](docs/API.md) — the `/api/*` surface and token auth
+
+## License
+
+MIT — see [LICENSE](LICENSE).
