@@ -25,10 +25,11 @@ default, an explicit per-scan authorization gate, non-destructive probes,
 bounded concurrency, and no exploitation, brute-force, or evasion
 capabilities of any kind.
 
-The project was built incrementally in seven milestones (Flask + SQLite,
-Python standard-library networking, pytest), finishing with 89 unit
-tests and 27 end-to-end checks passing, plus hardening (CSRF, security
-headers, secret-key hygiene) and a full documentation set.
+The project was built incrementally in twenty-one milestones
+(Flask + SQLite, Python standard-library networking, pytest, plus
+paramiko for the authenticated SSH audit), finishing with 229 tests
+passing, plus hardening (CSRF, security headers, secret-key hygiene,
+login system with audit log) and a full documentation set.
 
 ## 2. Objectives
 
@@ -73,13 +74,19 @@ Three layers (see `docs/ARCHITECTURE.md` for the full diagram):
 - **Scanner layer** (`scanner/`): `targets.py` (parsing + allow-list),
   `portscan.py` (bounded TCP connect scan, banner grabbing, fingerprint
   heuristics), `tlscheck.py` / `httpcheck.py` / `servicecheck.py`
-  (read-only protocol analyzers), `rules.py` (15 deterministic rules),
-  `engine.py` + `jobs.py` (orchestration, background threads, cooperative
-  cancellation, crash recovery).
+  (read-only protocol analyzers), `sshcheck.py` / `smbcheck.py` /
+  `rdpcheck.py` / `dbcheck.py` (SSH/SMB/RDP/database handshake analyzers),
+  `udpprobe.py` (DNS/SNMP/NTP/NetBIOS probes), `authchecks.py`
+  (memory-only authenticated SSH config audit), `rules/` (deterministic
+  rule registry), `engine.py` + `jobs.py` (orchestration, background
+  threads, cooperative cancellation, crash recovery).
 - **Application layer** (`app/`): Flask factory, server-rendered Jinja
   routes, SQLAlchemy models (`Scan`, `Asset`, `Port`, `Finding`,
-  `TlsInfo`, `HttpInfo`, `ServiceCheck`), `stats.py` / `diff.py` pure
-  aggregation helpers, `csrf.py` protection.
+  `TlsInfo`, `HttpInfo`, `ServiceCheck`, `User`, `Baseline`, ...),
+  `stats.py` / `diff.py` pure aggregation helpers, `csrf.py`
+  protection, Alembic migrations, login gate with audit log, email
+  password resets, drift baselines, network topology (server-side SVG),
+  and a zero-dependency i18n system (English/Hindi).
 - **Presentation layer**: dark, professional UI; Chart.js charts that
   always sit beside data tables (graceful offline degradation);
   printable HTML reports via `@media print` CSS.
@@ -101,6 +108,20 @@ everything else is HTML.
 | M5 — Visibility | Dashboard with real DB stats, asset inventory + per-IP timeline, attack-surface aggregation, Chart.js over real data. |
 | M6 — Workflow | Remediation triage (open/acknowledged/resolved/false_positive) that never touches evidence; printable HTML reports; scan-to-scan diff (new/gone findings, opened/closed ports, risk delta). |
 | M7 — Hardening & docs | CSRF tokens on all POSTs, security headers + CSP, cookie flags, secret-key warning; 9 remaining docs; 7 new security tests. |
+| M8 — Authentication | First-run admin setup, salted scrypt password hashing, login gate on all routes, append-only audit log, waitress production server. |
+| M9 — CVE mapping | Product+version → real NVD lookups with CVSS severity, 7-day cache, honest "likely" confidence. |
+| M10 — Scheduled scans | Cron-like scheduling with drift alerts ("new finding since last Tuesday"), webhook notifications. |
+| M11 — Exports | CSV/JSON finding exports for ticketing tools. |
+| M12 — Migrations | Alembic replaces `_ensure_columns()`; stamp-or-upgrade startup flow. |
+| M13 — Login hardening | Throttling, lockout, session hygiene. |
+| M14 — API tokens | Scoped API tokens for automation. |
+| M15 — Team roles | Viewer/operator/admin RBAC. |
+| M16 — Webhooks | Slack/email notifications on scan completion and drift. |
+| M17 — Docker | Production deployment guide (reverse proxy + TLS checklist). |
+| M18 — SSH analyzer | Real KEXINIT handshake; weak KEX/host-key/cipher/MAC grading. No login, ever. |
+| M19 — UDP discovery | DNS/SNMP/NTP/NetBIOS-NS probes; honest open vs open\|filtered; SNMP public-community rule. |
+| M20 — SMB/RDP + resets | Real SMB2/SMB1 negotiate (SMBv1, signing rules) and X.224 RDP handshake (plain/TLS/NLA rules); email password resets with single-use hashed tokens. |
+| M21 — Final five | MySQL/PostgreSQL/Redis analyzers; memory-only authenticated SSH config audit; /24 topology map; per-target drift baselines; English/Hindi i18n. Roadmap 16/16 complete. |
 
 ## 6. The rule engine (core contribution)
 
@@ -116,45 +137,49 @@ one. Adding a rule is documented in `RULE_DEVELOPMENT.md` and takes
 
 ## 7. Testing & verification
 
-- **89 unit tests** (pytest): target parsing, port states, fingerprint
-  heuristics, TLS/HTTP/service analyzers, all 15 rules (positive *and*
-  negative cases), stats/diff math, CSRF (forged POST → 403; valid token
-  → 302), security headers, cookie flags. Network is mocked; DB tests use
-  temp files.
-- **27 end-to-end checks**: real scans through the real Flask app against
-  fake HTTPS/HTTP/FTP/SMTP services on loopback — asserting real
-  findings, real evidence strings, correct risk arithmetic, triage
-  preserving evidence, and a two-scan comparison (risk delta −3, one
-  finding gone, two ports closed).
+- **229 tests** (pytest): target parsing, port states, fingerprint
+  heuristics, every protocol analyzer (TLS/HTTP/SSH/SMB/RDP/MySQL/
+  PostgreSQL/Redis/UDP) against fake wire-protocol servers, every rule
+  (positive *and* negative cases), stats/diff/topology/i18n/baseline
+  math, auth flows (login, CSRF, password reset, API tokens, RBAC),
+  migrations (old-DB upgrade paths), security headers, cookie flags.
+  2 tests skip in sandboxed CI (live UDP sockets blocked); 2 more skip
+  without the optional paramiko dependency.
+- **End-to-end checks**: real scans through the real Flask app against
+  fake services on loopback — asserting real findings, real evidence
+  strings, correct risk arithmetic, triage preserving evidence,
+  baseline drift, and report rendering.
 - See `docs/TESTING.md` for methodology and `docs/LIMITATIONS.md` for
-  what testing does *not* cover (no JS tests, no load tests, dev-server
-  only).
+  what testing does *not* cover (no JS tests, no load tests).
 
 ## 8. Results
 
-Against a lab of intentionally misconfigured fake services, NetVulnX
+Against labs of intentionally misconfigured fake services, NetVulnX
 correctly identified weak TLS versions, missing security headers,
-verbose service banners, and cleartext services — each with accurate
-evidence and no false positives on the clean control service. The full
-workflow (scan → authorize → triage → printable report → compare) runs
-end-to-end in the browser. All quality gates pass: 89 unit + 27 e2e,
+verbose service banners, cleartext services, SMBv1, unsigned SMB,
+plain-RDP, EOL database versions, passwordless Redis, and weak sshd
+settings — each with accurate evidence and no false positives on clean
+control services. The full workflow (scan → authorize → triage →
+printable report → compare → baseline drift) runs end-to-end in the
+browser, in English or Hindi. All quality gates pass: 229 tests,
 zero fabricated outputs by construction.
 
 ## 9. Limitations
 
-Summarized from `docs/LIMITATIONS.md`: TCP-only scanning; no UDP, no
-authenticated checks, no web crawling; version-based findings are
-"potential" without a CVE feed; localhost dev server with no login
-system; SQLite single-file storage; charts need the CDN (tables remain);
-reports are point-in-time. Each limitation maps to a ROADMAP.md item.
+Summarized from `docs/LIMITATIONS.md`: no UDP closed-port confirmation
+(no ICMP); version-based findings stay "potential" without a CVE feed
+match; SQLite single-file storage (fine for team scale, not
+enterprise); the Docker image is documented but was not built in this
+workspace; charts need the CDN (tables remain). The roadmap that once
+listed these as future work is now 16/16 complete — remaining items
+would be new scope, not gaps.
 
 ## 10. Future work
 
-Prioritized in `docs/ROADMAP.md`: CVE feed mapping, authentication,
-scheduled scans with drift alerts, CSV/JSON export, Alembic migrations,
-UDP scanning, authenticated protocol checks (SSH/SMB/RDP), and a
-production deployment guide. Exploit capabilities are explicitly
-excluded — permanently.
+The `docs/ROADMAP.md` list is 16/16 complete. Any further work would be
+new scope rather than planned gaps — candidates include a built and
+published Docker image, load testing, and JavaScript test coverage.
+Exploit capabilities remain explicitly excluded — permanently.
 
 ## 11. Conclusion
 
