@@ -151,11 +151,11 @@ def test_live_dns_probe():
             except socket.timeout:
                 continue
     threading.Thread(target=run, daemon=True).start()
-    udpprobe.PROBES[9999] = udpprobe.PROBES[53]
+    udpprobe.PROBES[port] = udpprobe.PROBES[53]
     try:
-        res = udpprobe.probe_udp("127.0.0.1", 9999, timeout=2.0)
+        res = udpprobe.probe_udp("127.0.0.1", port, timeout=2.0)
     finally:
-        del udpprobe.PROBES[9999]
+        del udpprobe.PROBES[port]
     stop.set()
     srv.close()
     assert res["state"] == "open"
