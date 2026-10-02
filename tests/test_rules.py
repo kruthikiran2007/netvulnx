@@ -289,6 +289,14 @@ def test_rules_against_real_model_attributes(monkeypatch):
             check_type="smtp_ehlo", summary="no STARTTLS advertised",
             details=json.dumps({"starttls_advertised": False,
                                 "banner": "220 x", "extensions": []})),
+        "ssh_algorithms": ServiceCheck(
+            check_type="ssh_algorithms", summary="weak algorithms",
+            details=json.dumps({
+                "server_version": "SSH-2.0-FakeSSH",
+                "kex_algorithms": ["diffie-hellman-group1-sha1"],
+                "host_key_algorithms": ["ssh-dss"],
+                "ciphers_c2s": ["3des-cbc"], "ciphers_s2c": ["3des-cbc"],
+                "macs_c2s": ["hmac-md5"], "macs_s2c": ["hmac-md5"]})),
     }
     ctx = {"tls": tls, "http": http, "checks": checks, "target": "127.0.0.1",
            "port": port}

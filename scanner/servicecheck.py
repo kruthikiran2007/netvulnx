@@ -16,8 +16,15 @@ Checks:
                       QUIT. No directory listing, no download. Anonymous
                       FTP probing is standard assessment practice; the
                       observation is whether the server ALLOWS it.
+  - SSH  (port 22):  standard version + KEXINIT handshake — exactly what
+                      every SSH client does on connect — then disconnect.
+                      No login attempt, no credentials. The observation is
+                      which crypto algorithms the server advertises
+                      (implemented in scanner/sshcheck.py).
 """
 import random
+
+from scanner.sshcheck import check_ssh_algorithms  # noqa: F401 (re-export)
 import socket
 import struct
 

@@ -38,9 +38,12 @@ present. Ordered roughly by value-to-effort for a student project.
 - [ ] **Authenticated checks.** Optional, user-supplied credentials for
   deeper assessment (SSH config audit, SMB signing checks) — with the
   secrets handled via the Secure Vault pattern, never stored in plaintext.
-- [ ] **More protocol analyzers.** SSH (algorithms, host keys), SMB, RDP
-  (CredSSP/TLS posture), database banners (MySQL/Postgres/Redis) —
-  read-only, same philosophy as the existing five.
+- [x] **SSH algorithm analyzer (done, Milestone 18).** Real version +
+  KEXINIT handshake, grades key exchange / host keys / ciphers / MACs —
+  read-only, no login attempted.
+- [ ] **More protocol analyzers.** SMB, RDP (CredSSP/TLS posture),
+  database banners (MySQL/Postgres/Redis) —
+  read-only, same philosophy as the existing checks.
 - [ ] **Network topology view.** Host relationships and trust zones from
   scan data.
 

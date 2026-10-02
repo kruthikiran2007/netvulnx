@@ -25,25 +25,44 @@ def _match_cve(ctx):
     cves = cve_lib.lookup_cves(product, version)
     if not cves:
         return None  # none known (or offline) -> honest silence
+    severities = {"CRITICAL": "critical", "HIGH": "high", "MEDIUM": "medium",
+                  "LOW": "low"}
+    findings = []
+    for c in cves[:cve_lib.MAX_CVES_PER_SERVICE]:  # already most-severe first
+        sev = severities.get(str(c.get("severity", "")).upper(), "info")
+        findings.append({
+            "title": f"{c['id']}: {c.get('summary', '')[:120]}",
+            "severity": sev,
+            "description": f"NVD lists {c['id']} against {cpe}. "
+                           f"CVSS {c.get('cvss', 'n/a')} "
+                           f"({c.get('severity', 'unknown')}). "
+                           f"{c.get('summary', '')[:400]}",
+            "impact": "If this service is genuinely the vulnerable build, "
+                      "the flaw may be exploitable over the network.",
+            "remediation": f"Patch or upgrade {product} past the affected "
+                           f"version; verify with the vendor advisory. "
+                           f"https://nvd.nist.gov/vuln/detail/{c['id']}",
+        })
     return {"cpe": cpe,
             "product": product,
             "version": version,
             "cve_count": len(cves),
-            "cves": cves[:cve_lib.MAX_CVES_PER_SERVICE]}
+            "cves": cves[:cve_lib.MAX_CVES_PER_SERVICE],
+            "_findings": findings}
 
 
 RULES = [
     {
         "id": "cve-known-vulnerabilities",
-        # NOTE: title/severity below are placeholders — engine.py expands
-        # this rule into per-CVE findings with real titles and CVSS-based
-        # severities. They exist only to satisfy the rule schema guardrail.
+        # NOTE: title/severity below are schema fallbacks — the rule expands
+        # into per-CVE findings with real titles and CVSS-based severities
+        # via evidence["_findings"] (see scanner/engine.py).
         "title": "Known CVEs affect this software (see evidence)",
         "severity": "info",
         "confidence": "likely",
-        "description": "Placeholder — replaced per CVE by the scan engine.",
-        "impact": "Placeholder — replaced per CVE by the scan engine.",
-        "remediation": "Placeholder — replaced per CVE by the scan engine.",
+        "description": "Placeholder — replaced per CVE by the rule itself.",
+        "impact": "Placeholder — replaced per CVE by the rule itself.",
+        "remediation": "Placeholder — replaced per CVE by the rule itself.",
         "references": ["https://nvd.nist.gov/developers/vulnerabilities"],
         "match": _match_cve,
     },

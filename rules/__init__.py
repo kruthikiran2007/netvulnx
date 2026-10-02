@@ -22,14 +22,15 @@ Severity is about *impact if abused*; confidence is about *how sure the
 measurement is*. A finding can be high-severity but only "likely", or
 low-severity and "confirmed" — the two axes are independent, on purpose.
 """
-from rules import tls_rules, http_rules, service_rules, cve_rules
+from rules import tls_rules, http_rules, service_rules, cve_rules, ssh_rules
 
 SEVERITIES = ("critical", "high", "medium", "low", "info")
 SEVERITY_RANK = {name: i for i, name in enumerate(SEVERITIES)}
 
 CONFIDENCES = ("confirmed", "likely", "potential", "informational")
 
-ALL_RULES = tls_rules.RULES + http_rules.RULES + service_rules.RULES + cve_rules.RULES
+ALL_RULES = (tls_rules.RULES + http_rules.RULES + service_rules.RULES +
+             cve_rules.RULES + ssh_rules.RULES)
 
 # Guardrail: rule IDs must be unique and the schema must be complete.
 # A broken rule definition fails fast at import, not mid-scan.

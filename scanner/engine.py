@@ -147,6 +147,8 @@ def _analyze_service(scan, ip: str, port_num: int, service: str, port_row: Port,
         extra_checks.append(("smtp_ehlo", servicecheck.check_smtp))
     if service == "dns" or port_num == 53:
         extra_checks.append(("dns_version", servicecheck.check_dns_version))
+    if service == "ssh" or port_num == 22:
+        extra_checks.append(("ssh_algorithms", servicecheck.check_ssh_algorithms))
 
     for check_type, fn in extra_checks:
         if cancel_event.is_set():
@@ -186,73 +188,46 @@ def _evaluate_rules(scan, asset, port_row):
         "checks": {c.check_type: c for c in port_row.service_checks},
     }
     for rule, evidence in evaluate_rules(ctx):
-        if rule["id"] == "cve-known-vulnerabilities":
-            _add_cve_findings(scan, asset, port_row, evidence)
-            continue
-        db.session.add(Finding(
-            scan_id=scan.id,
-            asset_id=asset.id,
-            port_id=port_row.id,
-            rule_id=rule["id"],
-            title=rule["title"],
-            description=rule["description"],
-            severity=rule["severity"],
-            confidence=rule["confidence"],
-            evidence=json.dumps(evidence, default=str),
-            impact=rule["impact"],
-            remediation=rule["remediation"],
-            references=json.dumps(rule.get("references", [])),
-        ))
+        # Dynamic findings (Milestones 9, 18): a rule may override the
+        # static title/description/severity via evidence["_finding"], or
+        # expand into several findings via evidence["_findings"] (each a
+        # dict of the same override fields). The static rule text stays as
+        # the schema fallback.
+        for override in _dynamic_findings(evidence):
+            db.session.add(Finding(
+                scan_id=scan.id,
+                asset_id=asset.id,
+                port_id=port_row.id,
+                rule_id=rule["id"],
+                title=(override.get("title") if override else None)
+                      or rule["title"],
+                description=(override.get("description") if override else None)
+                      or rule["description"],
+                severity=(override.get("severity") if override else None)
+                      or rule["severity"],
+                confidence=rule["confidence"],
+                evidence=json.dumps(evidence, default=str),
+                impact=(override.get("impact") if override else None)
+                      or rule["impact"],
+                remediation=(override.get("remediation") if override else None)
+                      or rule["remediation"],
+                references=json.dumps(
+                    (override.get("references") if override else None)
+                    or rule.get("references", [])),
+            ))
 
 
-def _add_cve_findings(scan, asset, port_row, evidence):
-    """Expand CVE evidence into one finding per CVE (most severe first).
+def _dynamic_findings(evidence):
+    """Normalize dynamic-finding evidence into a list of override dicts.
 
-    Severity comes from each CVE's CVSS score; confidence stays "likely"
-    because banner -> CPE matching is heuristic and a CVE affecting a
-    version doesn't prove this host is exploitable — the text says so.
+    Returns [None] for the plain static case. Pops the control keys so the
+    stored evidence stays clean.
     """
-    from scanner import cve as cve_lib
-    cves = evidence.get("cves") or []
-    for item in cves:
-        cve_id = item.get("id", "CVE-?")
-        score = item.get("cvss")
-        score_txt = f"CVSS {score}" if score is not None else "CVSS n/a"
-        title = f"{cve_id} affects {evidence.get('product')} {evidence.get('version')}"
-        description = item.get("description") or "No description from NVD."
-        db.session.add(Finding(
-            scan_id=scan.id,
-            asset_id=asset.id,
-            port_id=port_row.id,
-            rule_id="cve-known-vulnerabilities",
-            title=title[:200],
-            description=(
-                f"[{score_txt}] {description}\n\n"
-                f"Heads-up: this CVE is known to affect "
-                f"{evidence.get('product')} {evidence.get('version')} "
-                f"(matched via {evidence.get('cpe')}). That does not prove "
-                f"this host is exploitable — verify before acting."),
-            severity=cve_lib.cvss_to_severity(score),
-            confidence="likely",
-            evidence=json.dumps({
-                "cve_id": cve_id,
-                "cpe": evidence.get("cpe"),
-                "product": evidence.get("product"),
-                "version": evidence.get("version"),
-                "cvss": score,
-                "vector": item.get("vector", ""),
-                "published": item.get("published", ""),
-                "total_cves_for_service": evidence.get("cve_count"),
-            }, default=str),
-            impact=("A publicly known vulnerability exists in this exact "
-                    "software version. Attackers routinely scan for it, and "
-                    "exploit code may be publicly available."),
-            remediation=("Upgrade to a fixed release (see the NVD entry for "
-                         "affected/fixed versions), or apply the vendor's "
-                         "patch. If you can't upgrade now, check whether the "
-                         "vulnerable feature is even enabled/ reachable."),
-            references=json.dumps([item.get("url", "")]),
-        ))
+    multi = evidence.pop("_findings", None)
+    if multi:
+        return list(multi)
+    single = evidence.pop("_finding", None)
+    return [single]
 
 
 def _run(scan_id: int, cancel_event):
