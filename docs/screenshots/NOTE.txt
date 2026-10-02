@@ -1,0 +1,4 @@
+Screenshots go here, exactly these filenames (PNG):
+- dashboard.png  -> app dashboard after a scan completes
+- findings.png   -> scan findings table with severities
+- report.png     -> printable report page

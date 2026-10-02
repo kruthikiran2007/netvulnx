@@ -17,7 +17,7 @@ explainably, tracks remediation, and watches for drift on a schedule.
 
 | Dashboard | Scan findings | Printable report |
 |---|---|---|
-| `docs/screenshots/dashboard.png` | `docs/screenshots/findings.png` | `docs/screenshots/report.png` |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Scan findings](docs/screenshots/findings.png) | ![Printable report](docs/screenshots/report.png) |
 
 ## What it does
 
