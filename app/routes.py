@@ -652,6 +652,7 @@ def schedule_new_submit():
         # then every interval after that.
         next_run_at=datetime.now(timezone.utc) + timedelta(minutes=2),
         created_by=user.username if user else "admin",
+        webhook_url=(request.form.get("webhook_url", "").strip() or None),
     )
     db.session.add(sched)
     db.session.commit()

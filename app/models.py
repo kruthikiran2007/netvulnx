@@ -87,6 +87,10 @@ class ScheduledScan(db.Model):
     next_run_at = db.Column(db.DateTime, nullable=False)
     enabled = db.Column(db.Boolean, nullable=False, default=True)
 
+    # Milestone 16: optional webhook (Slack/Teams/Discord) notified with
+    # the drift summary each time a scheduled run completes.
+    webhook_url = db.Column(db.String(500), nullable=True)
+
     created_by = db.Column(db.String(80), nullable=False, default="admin")
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
 

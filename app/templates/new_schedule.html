@@ -60,6 +60,15 @@
     <span class="hint">First run happens within a few minutes, then on this cadence.</span>
   </label>
 
+  <label>
+    Webhook URL <span class="hint-inline">(optional)</span>
+    <input type="url" name="webhook_url" value="{{ webhook_url or '' }}"
+           placeholder="https://hooks.slack.com/…">
+    <span class="hint">When a scheduled run completes, the drift summary
+    (new/resolved findings) is POSTed here as JSON. Leave empty for no
+    notifications.</span>
+  </label>
+
   <label class="check">
     <input type="checkbox" name="authorize_recurring" value="yes">
     <strong>I authorize NetVulnX to scan this target automatically on this

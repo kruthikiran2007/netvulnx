@@ -376,3 +376,7 @@ def _run(scan_id: int, cancel_event):
     scan.risk_score = score_findings(
         Finding.query.filter_by(scan_id=scan.id).all())
     db.session.commit()
+
+    # Milestone 16: scheduled runs notify their webhook (best-effort).
+    from scanner import notify as _notify
+    _notify.notify_scan_completed(scan)

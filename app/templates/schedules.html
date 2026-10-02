@@ -15,7 +15,7 @@
   <tbody>
     {% for s in schedules %}
     <tr>
-      <td>{{ s.name }}</td>
+      <td>{{ s.name }}{% if s.webhook_url %} <span class="muted">(notifies webhook)</span>{% endif %}</td>
       <td><code>{{ s.target_raw }}</code></td>
       <td>{{ s.profile }}</td>
       <td>{{ s.interval }}</td>
