@@ -23,7 +23,7 @@ from app import auth as auth_lib
 from app import mail as mail_lib
 from app.models import (Scan, Asset, Port, Finding, FINDING_STATUSES,
                         CLOSED_STATUSES, User, AuditEvent, ScheduledScan,
-                        ApiToken, PasswordResetToken)
+                        ApiToken, PasswordResetToken, Baseline)
 from app.drift import drift_for_scan
 from app.stats import (severity_counts, worst_severity, service_exposure,
                        inventory_rows, risk_history, recent_findings)
@@ -99,6 +99,33 @@ def asset_inventory():
     """Global asset inventory: one row per IP seen across all scans."""
     assets = Asset.query.order_by(Asset.checked_at.desc()).all()
     return render_template("assets.html", rows=inventory_rows(assets))
+
+
+@bp.get("/topology")
+def topology_view():
+    """Network topology (Milestone 21): observed hosts grouped into /24
+    zones, drawn as server-side SVG. See app/topology.py for exactly what
+    the picture does and does not claim."""
+    from app import topology as topo_lib
+    assets = (Asset.query.join(Scan)
+              .filter(Scan.status == "completed")
+              .order_by(Asset.checked_at.desc()).all())
+    # One node per host: keep the most recent observation of each IP.
+    seen = {}
+    for a in assets:
+        seen.setdefault(a.ip_address, a)
+    nodes = []
+    for a in seen.values():
+        live = [f for f in a.findings
+                if f.status not in CLOSED_STATUSES]
+        worst = worst_severity(f.severity for f in live)
+        services = sorted({p.service for p in a.ports
+                           if p.service and p.service != "unknown"})
+        nodes.append((a, worst, len(a.ports), services))
+    zones, edges = topo_lib.build_topology(nodes)
+    return render_template("topology.html",
+                           svg=topo_lib.render_svg(zones, edges),
+                           zone_count=len(zones), host_count=len(nodes))
 
 
 @bp.get("/assets/<path:ip>")
@@ -286,8 +313,18 @@ def authorize_scan_submit(scan_id):
     scan.started_at = scan.authorized_at
     scan.current_stage = "Starting…"
     db.session.commit()
+    # Authenticated checks (Milestone 21): optional credentials from the
+    # form go ONLY into the in-memory vault — never the database, never
+    # the audit log. The engine pops them once when the scan starts.
+    from scanner import authchecks
+    auth_enabled = authchecks.store_credentials(
+        scan.id,
+        request.form.get("auth_username", ""),
+        request.form.get("auth_password", ""))
     auth_lib.log_audit("scan.authorized",
-                       f"scan #{scan.id} '{scan.name}' -> {scan.target_raw}")
+                       f"scan #{scan.id} '{scan.name}' -> {scan.target_raw}" +
+                       (" [authenticated checks enabled]"
+                        if auth_enabled else ""))
 
     jobs.start_scan_job(current_app._get_current_object(), scan.id)
     flash("Scan started in the background — progress is live below.", "info")
@@ -433,6 +470,84 @@ def scan_compare():
                            a_id=a_id, b_id=b_id, result=result)
 
 
+@bp.post("/scans/<int:scan_id>/baseline")
+@_require_role("operator")
+def set_baseline(scan_id):
+    """Pin a completed scan as the drift baseline for its target.
+
+    One baseline per target: setting a new one replaces the old. The
+    drift view then compares this baseline against the newest completed
+    scan of the same target.
+    """
+    scan = Scan.query.get_or_404(scan_id)
+    if scan.status != "completed":
+        flash("Only completed scans can be baselines.", "error")
+        return redirect(url_for("main.scan_detail", scan_id=scan.id))
+    existing = Baseline.query.filter_by(target=scan.target_raw).first()
+    if existing:
+        existing.scan_id = scan.id
+        existing.note = request.form.get("note", "").strip() or None
+        existing.created_at = datetime.now(timezone.utc)
+        action = "updated"
+    else:
+        existing = Baseline(target=scan.target_raw, scan_id=scan.id,
+                            note=request.form.get("note", "").strip() or None)
+        db.session.add(existing)
+        action = "set"
+    db.session.commit()
+    auth_lib.log_audit("baseline.set",
+                       f"baseline for '{scan.target_raw}' {action} -> "
+                       f"scan #{scan.id}")
+    flash(f"Baseline {action} for {scan.target_raw}.", "info")
+    return redirect(url_for("main.baseline_list"))
+
+
+@bp.get("/baselines")
+def baseline_list():
+    """All pinned baselines, newest first."""
+    baselines = Baseline.query.order_by(Baseline.created_at.desc()).all()
+    return render_template("baselines.html", baselines=baselines)
+
+
+@bp.get("/baselines/<int:baseline_id>")
+def baseline_detail(baseline_id):
+    """Drift view: baseline vs the newest completed scan of the same target."""
+    baseline = Baseline.query.get_or_404(baseline_id)
+    base_scan = baseline.scan
+    latest = (Scan.query
+              .filter(Scan.target_raw == baseline.target,
+                      Scan.status == "completed",
+                      Scan.id != base_scan.id)
+              .order_by(Scan.completed_at.desc()).first())
+    result = None
+    if latest:
+        f_before = Finding.query.filter_by(scan_id=base_scan.id).all()
+        f_after = Finding.query.filter_by(scan_id=latest.id).all()
+        p_before = Port.query.filter_by(scan_id=base_scan.id).all()
+        p_after = Port.query.filter_by(scan_id=latest.id).all()
+        f_diff = compare_findings(f_before, f_after)
+        p_diff = compare_ports(p_before, p_after)
+
+        def _fkey(pair):
+            f = pair[1] or pair[0]
+            ip = f.asset.ip_address if f.asset else ""
+            return (SEVERITY_RANK.get(f.severity, 99), f.rule_id or "", ip)
+
+        def _pkey(pair):
+            p = pair[1] or pair[0]
+            ip = p.asset.ip_address if p.asset else ""
+            return (ip, p.port)
+
+        for key in ("new", "gone", "same"):
+            f_diff[key].sort(key=_fkey)
+        for key in ("opened", "closed", "same"):
+            p_diff[key].sort(key=_pkey)
+        result = {"summary": summarize(base_scan, latest, f_diff, p_diff),
+                  "findings": f_diff, "ports": p_diff}
+    return render_template("baseline_detail.html", baseline=baseline,
+                           base_scan=base_scan, latest=latest, result=result)
+
+
 # ---------------------------------------------------------------------------
 # Authentication (Milestone 8). The login gate itself lives in
 # app/__init__.py (_require_login); these are the pages it lets through.
@@ -534,6 +649,15 @@ def logout():
         auth_lib.log_audit("logout", "", actor=user.username)
     flash("Logged out.", "info")
     return redirect(url_for("main.login"))
+
+
+@bp.get("/lang/<code>")
+def set_language(code):
+    """Switch the UI language (Milestone 21). Stored in the session;
+    unknown codes are ignored and fall back to English."""
+    from app import i18n as i18n_lib
+    i18n_lib.set_lang(code)
+    return redirect(request.referrer or url_for("main.dashboard"))
 
 
 # ---------------------------------------------------------------------------

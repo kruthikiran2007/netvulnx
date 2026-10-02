@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Compare scans · NetVulnX{% endblock %}
 {% block content %}
-<h1>Compare scans</h1>
+<h1>{{ _('Compare scans') }}</h1>
 <p class="muted">
   Pick two <strong>completed</strong> scans to see what changed between them:
   new and gone findings, opened and closed ports, and the risk-score delta.
@@ -28,74 +28,16 @@
       {% endfor %}
     </select>
   </label>
-  <button class="btn" type="submit">Compare</button>
+  <button class="btn" type="submit">{{ _("Compare") }}</button>
 </form>
 
 {% if completed|length < 2 %}
 <p class="muted">You need at least two completed scans to compare.
 <a href="{{ url_for('main.new_scan_form') }}">Run a scan</a>.</p>
 {% elif result %}
-  {% set s = result.summary %}
-  <h2>{{ s.before_name }} → {{ s.after_name }}</h2>
-  <div class="cards">
-    <div class="card">
-      <div class="label">Risk score</div>
-      <div class="value">{{ s.risk_before }} → {{ s.risk_after }}</div>
-      <div class="muted small">
-        {% if s.risk_delta > 0 %}<span class="badge sev-high">+{{ s.risk_delta }} worse</span>
-        {% elif s.risk_delta < 0 %}<span class="badge completed">{{ s.risk_delta }} better</span>
-        {% else %}<span class="muted">unchanged</span>{% endif %}
-      </div>
-    </div>
-    <div class="card">
-      <div class="label">Findings</div>
-      <div class="value">{{ s.findings_new }} new · {{ s.findings_gone }} gone</div>
-    </div>
-    <div class="card">
-      <div class="label">Ports</div>
-      <div class="value">{{ s.ports_opened }} opened · {{ s.ports_closed }} closed</div>
-    </div>
-  </div>
-
-  <h2>Findings: new ({{ result.findings.new|length }})</h2>
-  {% if result.findings.new %}
-    {% for _, f in result.findings.new %}
-    <div class="finding sev-{{ f.severity }}">
-      <div class="finding-head">
-        <span class="badge sev-{{ f.severity }}">{{ f.severity }}</span>
-        <strong>{{ f.title }}</strong>
-      </div>
-      <div class="muted small"><code>{{ f.asset.ip_address }}:{{ f.port.port if f.port else "—" }}</code> · rule <code>{{ f.rule_id }}</code></div>
-    </div>
-    {% endfor %}
-  {% else %}<p class="muted">None — no new findings in the later scan.</p>{% endif %}
-
-  <h2>Findings: gone ({{ result.findings.gone|length }})</h2>
-  {% if result.findings.gone %}
-    {% for f, _ in result.findings.gone %}
-    <div class="finding sev-{{ f.severity }}">
-      <div class="finding-head">
-        <span class="badge sev-{{ f.severity }}">{{ f.severity }}</span>
-        <strong>{{ f.title }}</strong>
-      </div>
-      <div class="muted small"><code>{{ f.asset.ip_address }}:{{ f.port.port if f.port else "—" }}</code> · rule <code>{{ f.rule_id }}</code></div>
-    </div>
-    {% endfor %}
-  {% else %}<p class="muted">None — every earlier finding still reproduces.</p>{% endif %}
-
-  <h2>Ports opened ({{ result.ports.opened|length }}) / closed ({{ result.ports.closed|length }})</h2>
-  <table>
-    <tr><th>Change</th><th>Asset</th><th>Port</th><th>Service</th></tr>
-    {% for _, p in result.ports.opened %}
-    <tr><td><span class="badge sev-high">opened</span></td><td><code>{{ p.asset.ip_address }}</code></td><td><code>{{ p.port }}</code></td><td>{{ p.service or "unknown" }}</td></tr>
-    {% endfor %}
-    {% for p, _ in result.ports.closed %}
-    <tr><td><span class="badge completed">closed</span></td><td><code>{{ p.asset.ip_address }}</code></td><td><code>{{ p.port }}</code></td><td>{{ p.service or "unknown" }}</td></tr>
-    {% endfor %}
-    {% if not result.ports.opened and not result.ports.closed %}
-    <tr><td colspan="4" class="muted">No port changes between these scans.</td></tr>
-    {% endif %}
-  </table>
+  {% set before_name = result.summary.before_name %}
+  {% set after_name = result.summary.after_name %}
+  {% include "_diff_result.html" with context %}
 {% elif a_id and b_id %}
 <p class="muted">Those two scans can't be compared (pick two different completed scans).</p>
 {% endif %}

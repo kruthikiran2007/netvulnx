@@ -245,3 +245,12 @@ ul.refs { margin: 6px 0; padding-left: 20px; font-size: 0.9em; }
   .finding { border-left-width: 4px; }
   a { color: #000; text-decoration: none; }
 }
+
+/* Milestone 21 additions */
+.lang-switch { font-size: 0.85em; margin-left: 1em; }
+.lang-switch a { text-decoration: none; }
+.auth-creds { margin: 1em 0; padding: 0.8em; border: 1px solid #ddd;
+              border-radius: 6px; background: #fafafa; }
+.auth-creds summary { cursor: pointer; }
+.auth-creds .hint { font-size: 0.9em; color: #555; }
+.topo-wrap { overflow-x: auto; margin: 1em 0; }

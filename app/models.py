@@ -321,6 +321,27 @@ class User(db.Model):
         return self.role == "admin"
 
 
+class Baseline(db.Model):
+    """A pinned reference scan per target for drift tracking (M21).
+
+    One baseline per target string: setting a new one replaces the old.
+    The drift view compares the baseline against the newest completed
+    scan of the same target.
+    """
+    __tablename__ = "baselines"
+
+    id = db.Column(db.Integer, primary_key=True)
+    target = db.Column(db.String(255), nullable=False, unique=True)
+    scan_id = db.Column(db.Integer, db.ForeignKey("scans.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"))
+    note = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+    scan = db.relationship("Scan")
+    creator = db.relationship("User")
+
+
+
 class PasswordResetToken(db.Model):
     """Single-use password-reset token (Milestone 20).
 

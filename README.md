@@ -1,6 +1,6 @@
 # NetVulnX — Network Vulnerability Scanner & Risk Assessment Platform
 
-![tests](https://img.shields.io/badge/tests-189%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-227%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![docker](https://img.shields.io/badge/docker-ready-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -42,6 +42,13 @@ From a real scan of a lab target (11 findings, risk score 13):
   vs TLS vs NLA (CredSSP) negotiation
 - **Email password resets** — single-use hashed tokens, 1-hour expiry,
   rate-limited, no user enumeration
+- **Database analyzers** — MySQL handshake version/EOL, PostgreSQL TLS probe,
+  Redis auth check (all read-only, no login)
+- **Authenticated checks** — optional SSH credentials (memory-only, never
+  stored) for a read-only `sshd -T` config audit
+- **Network topology** — observed hosts grouped in /24 zones, server-side SVG
+- **Drift baselines** — pin a scan per target, track new/gone findings vs latest
+- **i18n** — English/Hindi UI, zero-dependency JSON catalogs
 - CVE mapping: product+version → real NVD lookups with CVSS-based severity
   (7-day cache, honest "likely" confidence — never fabricated)
 
@@ -73,7 +80,7 @@ From a real scan of a lab target (11 findings, risk score 13):
    finding severities, not a black box.
 4. **Safety is a feature.** Target scope validation, an explicit
    authorization gate before any packet is sent, no brute force, no
-   exploitation, no DoS — enforced in code and tested (189 unit tests).
+   exploitation, no DoS — enforced in code and tested (227 unit tests).
 
 ## Safety first
 
@@ -126,7 +133,7 @@ netvulnx/
 ├── rules/                 # deterministic rule engine (TLS/HTTP/service/
 │                          #   CVE/SSH rules + risk scoring)
 ├── migrations/            # Alembic versioned schema migrations
-├── tests/                 # 189 pytest unit tests
+├── tests/                 # 227 pytest unit tests
 └── docs/                  # architecture, testing, security, deployment…
 ```
 
@@ -144,6 +151,7 @@ netvulnx/
 | 8 | Authentication + prod server | 17 | Docker deployment |
 | 9 | CVE mapping (NVD) | 18 | SSH algorithm analyzer |
 | 20 | SMB/RDP analyzers + email password resets | 19 | UDP service discovery |
+| 21 | DB analyzers, auth checks, topology, baselines, i18n |  |  |
 
 ## Documentation
 

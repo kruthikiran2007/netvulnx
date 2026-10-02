@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ get_lang() }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,28 +11,37 @@
     <div class="brand">NetVulnX <span class="tag">v1.0</span></div>
     <nav>
       {% if current_user %}
-      <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-      <a href="{{ url_for('main.asset_inventory') }}">Assets</a>
-      <a href="{{ url_for('main.attack_surface') }}">Attack surface</a>
-      <a href="{{ url_for('main.scan_list') }}">Scans</a>
-      <a href="{{ url_for('main.schedule_list') }}">Schedules</a>
+      <a href="{{ url_for('main.dashboard') }}">{{ _('Dashboard') }}</a>
+      <a href="{{ url_for('main.asset_inventory') }}">{{ _('Assets') }}</a>
+      <a href="{{ url_for('main.topology_view') }}">{{ _('Topology') }}</a>
+      <a href="{{ url_for('main.attack_surface') }}">{{ _('Attack surface') }}</a>
+      <a href="{{ url_for('main.scan_list') }}">{{ _('Scans') }}</a>
+      <a href="{{ url_for('main.baseline_list') }}">{{ _('Baselines') }}</a>
+      <a href="{{ url_for('main.schedule_list') }}">{{ _('Schedules') }}</a>
       {% if current_user.role in ("operator", "admin") %}
-      <a href="{{ url_for('main.new_scan_form') }}" class="btn">+ New scan</a>
+      <a href="{{ url_for('main.new_scan_form') }}" class="btn">+ {{ _('New scan') }}</a>
       {% endif %}
       {% if current_user.is_admin %}
-      <a href="{{ url_for('main.audit_log') }}">Audit</a>
-      <a href="{{ url_for('main.token_list') }}">API tokens</a>
-      <a href="{{ url_for('main.user_list') }}">Users</a>
+      <a href="{{ url_for('main.audit_log') }}">{{ _('Audit') }}</a>
+      <a href="{{ url_for('main.token_list') }}">{{ _('API tokens') }}</a>
+      <a href="{{ url_for('main.user_list') }}">{{ _('Users') }}</a>
       {% endif %}
       <span class="muted">{{ current_user.username }}</span>
-      <a href="{{ url_for('main.password_form') }}">Password</a>
+      <a href="{{ url_for('main.password_form') }}">{{ _('Password') }}</a>
       <form method="post" action="{{ url_for('main.logout') }}" style="display:inline">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-        <button type="submit" class="btn linklike">Log out</button>
+        <button type="submit" class="btn linklike">{{ _('Log out') }}</button>
       </form>
       {% else %}
-      <a href="{{ url_for('main.login') }}">Log in</a>
+      <a href="{{ url_for('main.login') }}">{{ _('Log in') }}</a>
       {% endif %}
+      <span class="lang-switch">
+        {% for code, name in languages.items() %}
+        {% if code == get_lang() %}<strong>{{ name }}</strong>
+        {% else %}<a href="{{ url_for('main.set_language', code=code) }}">{{ name }}</a>{% endif %}
+        {% if not loop.last %} · {% endif %}
+        {% endfor %}
+      </span>
     </nav>
   </header>
 
@@ -48,8 +57,8 @@
   </main>
 
   <footer>
-    NetVulnX — authorized assessments only.
-    Scan only systems you own or have explicit permission to test.
+    {{ _('NetVulnX — authorized assessments only.') }}
+    {{ _('Scan only systems you own or have explicit permission to test.') }}
   </footer>
 
   {% block scripts %}{% endblock %}

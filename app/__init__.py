@@ -29,6 +29,10 @@ def create_app(config_class=None):
     # --- Hardening (Milestone 7) ---
     from app import csrf as _csrf
 
+    # --- i18n (Milestone 21): {{ _('...') }} in templates ---
+    from app import i18n as _i18n
+    _i18n.init_app(app)
+
     @app.context_processor
     def _inject_csrf():
         # Makes {{ csrf_token() }} available in every template.

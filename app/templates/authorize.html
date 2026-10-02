@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 {% block title %}Authorize scan · NetVulnX{% endblock %}
 {% block content %}
-<h1>Confirm scan authorization</h1>
+<h1>{{ _('Confirm scan authorization') }}</h1>
 
 <div class="auth-box">
-  <h2>What will be scanned</h2>
+  <h2>{{ _('What will be scanned') }}</h2>
   <dl class="meta">
-    <dt>Scan name</dt><dd>{{ scan.name }}</dd>
-    <dt>Target</dt><dd><code>{{ target.display }}</code> ({{ target.type }})</dd>
-    <dt>Profile</dt><dd><strong>{{ profile.label }}</strong> — {{ profile.description }}</dd>
-    <dt>Hosts</dt><dd>{{ target.hosts|length }}</dd>
-    <dt>Ports</dt><dd>{{ ports|length }} ports
+    <dt>{{ _('Scan name') }}</dt><dd>{{ scan.name }}</dd>
+    <dt>{{ _('Target') }}</dt><dd><code>{{ target.display }}</code> ({{ target.type }})</dd>
+    <dt>{{ _('Profile') }}</dt><dd><strong>{{ profile.label }}</strong> — {{ profile.description }}</dd>
+    <dt>{{ _('Hosts') }}</dt><dd>{{ target.hosts|length }}</dd>
+    <dt>{{ _('Ports') }}</dt><dd>{{ ports|length }} ports
       {% if ports|length <= 40 %}<code>{{ ports|join(", ") }}</code>{% endif %}</dd>
   </dl>
 
-  <h2>What will happen</h2>
+  <h2>{{ _('What will happen') }}</h2>
   <p>
     NetVulnX will run <strong>host discovery</strong>, then a <strong>TCP
     connect port scan</strong> (max 32 parallel connections), then
@@ -34,11 +34,32 @@
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
     <label class="check">
       <input type="checkbox" name="confirm" value="yes" required>
-      I confirm that I own these systems or have explicit authorization to assess them.
+      {{ _('I confirm that I own these systems or have explicit authorization to assess them.') }}
     </label>
+
+    <details class="auth-creds">
+      <summary><strong>{{ _('Authenticated checks') }}</strong> ({{ _('optional') }})</summary>
+      <p class="hint">
+        Provide SSH credentials for a <strong>deeper, read-only</strong>
+        configuration audit (e.g. weak sshd settings). They are used
+        <strong>once for this scan only</strong>, held in server memory,
+        and never stored in the database or logs.
+      </p>
+      <p>
+        <label>SSH username<br>
+          <input type="text" name="auth_username" autocomplete="off" value="">
+        </label>
+      </p>
+      <p>
+        <label>SSH password<br>
+          <input type="password" name="auth_password" autocomplete="off" value="">
+        </label>
+      </p>
+    </details>
+
     <p>
-      <button class="btn primary" type="submit">Authorize &amp; start scan</button>
-      <a class="btn" href="{{ url_for('main.scan_list') }}">Cancel</a>
+      <button class="btn primary" type="submit">{{ _('Authorize & start scan') }}</button>
+      <a class="btn" href="{{ url_for('main.scan_list') }}">{{ _('Cancel') }}</a>
     </p>
   </form>
 </div>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Schedules · NetVulnX{% endblock %}
 {% block content %}
-<h1>Recurring scans</h1>
+<h1>{{ _('Recurring scans') }}</h1>
 <p><a class="btn primary" href="{{ url_for('main.schedule_new_form') }}">+ New schedule</a></p>
 
 {% if schedules %}

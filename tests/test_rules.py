@@ -351,6 +351,20 @@ def test_rules_against_real_model_attributes(monkeypatch):
     matched |= _smbrdp_ctx_matches(3389, "rdp", "rdp_negotiate",
                                    {"selected_protocol": 1,
                                     "selected_name": "TLS without NLA"})
+    # DB checks: old MySQL, Postgres without TLS, open Redis.
+    matched |= _smbrdp_ctx_matches(3306, "mysql", "mysql_greeting",
+                                   {"server_version": "5.7.44"})
+    matched |= _smbrdp_ctx_matches(5432, "postgresql", "postgres_ssl",
+                                   {"ssl_supported": False})
+    matched |= _smbrdp_ctx_matches(6379, "redis", "redis_ping",
+                                   {"auth_required": False})
+    # SSH config audit: a maximally permissive sshd trips all four rules.
+    matched |= _smbrdp_ctx_matches(22, "ssh", "ssh_config_audit",
+                                   {"effective_config": {
+                                       "permitemptypasswords": "yes",
+                                       "permitrootlogin": "yes",
+                                       "passwordauthentication": "yes",
+                                       "x11forwarding": "yes"}})
     # http-no-https-redirect is https-only by design; everything else fires.
     expected = {r["id"] for r in rules.ALL_RULES} - {"http-no-https-redirect"}
     assert matched == expected, f"missing: {expected - matched}"

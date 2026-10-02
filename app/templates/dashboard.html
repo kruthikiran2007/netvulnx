@@ -1,36 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · NetVulnX{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
+<h1>{{ _('Dashboard') }}</h1>
 <p class="muted">
-  Every number below comes from the scan database — nothing is hardcoded.
+  {{ _('Every number below comes from the scan database') }} — nothing is hardcoded.
   A risk score of 0 means no rule matched, not that a target is secure.
 </p>
 
 <div class="cards">
   <div class="card">
     <div class="stat">{{ total_scans }}</div>
-    <div class="label">Total scans</div>
+    <div class="label">{{ _("Total scans") }}</div>
   </div>
   <div class="card">
     <div class="stat">{{ total_assets }}</div>
-    <div class="label">Assets discovered</div>
+    <div class="label">{{ _("Assets discovered") }}</div>
   </div>
   <div class="card">
     <div class="stat">{{ completed_scans }}</div>
-    <div class="label">Completed scans</div>
+    <div class="label">{{ _("Completed scans") }}</div>
   </div>
   <div class="card">
     <div class="stat">{{ total_open_ports }}</div>
-    <div class="label">Open ports found</div>
+    <div class="label">{{ _("Open ports found") }}</div>
   </div>
   <div class class="card">
     <div class="stat">{{ total_findings }}</div>
-    <div class="label">Total findings</div>
+    <div class="label">{{ _("Total findings") }}</div>
   </div>
 </div>
 
-<h2>Findings by severity</h2>
+<h2>{{ _('Findings by severity') }}</h2>
 <div class="cards">
   {% for sev in ["critical", "high", "medium", "low", "info"] %}
   <div class="card">
@@ -41,7 +41,7 @@
 </div>
 
 {% if risk_history %}
-<h2>Risk score per completed scan</h2>
+<h2>{{ _('Risk score per completed scan') }}</h2>
 <p class="muted">Higher = more (and more severe) rule matches. Only completed scans are shown.</p>
 <div class="chart-wrap">
   <canvas id="riskChart"></canvas>
@@ -49,9 +49,9 @@
 {% endif %}
 
 {% if recent_findings %}
-<h2>Latest findings</h2>
+<h2>{{ _('Latest findings') }}</h2>
 <table>
-  <tr><th>Severity</th><th>Finding</th><th>Asset</th><th>Scan</th></tr>
+  <tr><th>{{ _('Severity') }}</th><th>{{ _('Finding') }}</th><th>{{ _('Asset') }}</th><th>{{ _('Scan') }}</th></tr>
   {% for f in recent_findings %}
   <tr>
     <td><span class="badge sev-{{ f.severity }}">{{ f.severity }}</span></td>

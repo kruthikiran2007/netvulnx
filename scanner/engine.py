@@ -27,7 +27,7 @@ from rules import evaluate as evaluate_rules
 from rules.scoring import score_findings
 from scanner import jobs, reachability, portscan, fingerprint
 from scanner import tlscheck, httpcheck, servicecheck
-from scanner import udpprobe, smbcheck, rdpcheck
+from scanner import udpprobe, smbcheck, rdpcheck, dbcheck, authchecks
 from scanner.targets import parse_target, parse_ports
 from config import Config
 
@@ -77,7 +77,7 @@ def _wants_http(service: str, port: int) -> bool:
 
 
 def _analyze_service(scan, ip: str, port_num: int, service: str, port_row: Port,
-                     cancel_event) -> bool:
+                     cancel_event, auth_creds=None) -> bool:
     """Phase 3b: read-only TLS/HTTP/service checks for one open port.
 
     Returns False if cancelled mid-way (caller should stop the scan).
@@ -154,6 +154,22 @@ def _analyze_service(scan, ip: str, port_num: int, service: str, port_row: Port,
         extra_checks.append(("smb_negotiate", smbcheck.check_smb))
     if service == "rdp" or port_num == 3389:
         extra_checks.append(("rdp_negotiate", rdpcheck.check_rdp))
+    if service == "mysql" or port_num == 3306:
+        extra_checks.append(("mysql_greeting", dbcheck.check_mysql))
+    if service in ("postgresql", "postgres") or port_num == 5432:
+        extra_checks.append(("postgres_ssl", dbcheck.check_postgres))
+    if service == "redis" or port_num == 6379:
+        extra_checks.append(("redis_ping", dbcheck.check_redis))
+
+    # Authenticated checks (Milestone 21): credentials were supplied on the
+    # authorization page and live only in the in-memory vault. They are
+    # popped once at scan start (see _run) and never stored anywhere.
+    if auth_creds and (service == "ssh" or port_num == 22):
+        def _ssh_audit(h, p, timeout=Config.SERVICE_CHECK_TIMEOUT,
+                       _c=auth_creds):
+            return authchecks.check_ssh_config(
+                h, p, _c["username"], _c["password"], timeout=timeout)
+        extra_checks.append(("ssh_config_audit", _ssh_audit))
 
     for check_type, fn in extra_checks:
         if cancel_event.is_set():
@@ -257,6 +273,12 @@ def _run(scan_id: int, cancel_event):
     scan.started_at = _utcnow()
     db.session.commit()
 
+    # Authenticated checks (Milestone 21): single-use pop from the
+    # in-memory vault. The vault no longer holds them after this; the
+    # local reference below is dropped when _run returns, and the
+    # credentials are never written to the database or logs.
+    auth_creds = authchecks.take_credentials(scan_id)
+
     for i, ip in enumerate(hosts):
         if _cancelled(scan, cancel_event):
             return
@@ -331,7 +353,8 @@ def _run(scan_id: int, cancel_event):
 
             # ---- Phase 3b: read-only service analysis ----
             if not _analyze_service(scan, ip, port, fp["service"],
-                                    port_row, cancel_event):
+                                    port_row, cancel_event,
+                                    auth_creds=auth_creds):
                 _cancelled(scan, cancel_event)
                 return
 

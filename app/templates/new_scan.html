@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}New scan · NetVulnX{% endblock %}
 {% block content %}
-<h1>New scan</h1>
+<h1>{{ _('New scan') }}</h1>
 
 <div class="notice">
   <strong>Scope &amp; authorization.</strong>
@@ -14,20 +14,20 @@
 <form method="post" action="{{ url_for('main.new_scan_submit') }}" class="form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
   <label>
-    Scan name
+    {{ _('Scan name') }}
     <input type="text" name="name" value="{{ name or '' }}" maxlength="120"
            placeholder="e.g. Lab VM baseline">
   </label>
 
   <label>
-    Target
+    {{ _('Target') }}
     <input type="text" name="target" value="{{ target or '' }}" required
            placeholder="127.0.0.1  or  192.168.56.0/24  or  mylab.local">
-    <span class="hint">An IP address, a CIDR range (max /24), or a hostname.</span>
+    <span class="hint">{{ _('An IP address, a CIDR range (max /24), or a hostname.') }}</span>
   </label>
 
   <fieldset class="profiles">
-    <legend>Scan profile — each has clearly defined behavior</legend>
+    <legend>{{ _('Scan profile — each has clearly defined behavior') }}</legend>
     {% for key, p in profiles.items() %}
     <label class="profile-card">
       <input type="radio" name="profile" value="{{ key }}"
@@ -42,11 +42,11 @@
   </fieldset>
 
   <label>
-    Ports to check <span class="hint-inline">(used only for the Custom profile)</span>
+    {{ _('Ports to check') }} <span class="hint-inline">{{ _('(used only for the Custom profile)') }}</span>
     <input type="text" name="ports" value="{{ ports or default_ports }}">
     <span class="hint">Comma-separated and/or ranges, e.g. <code>80,443</code> or <code>20-25,80</code>. Max 1024 ports.</span>
   </label>
 
-  <button class="btn primary" type="submit">Continue → review &amp; authorize</button>
+  <button class="btn primary" type="submit">{{ _("Continue → review & authorize") }}</button>
 </form>
 {% endblock %}

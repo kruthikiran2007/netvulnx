@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Baselines · NetVulnX{% endblock %}
+{% block content %}
+<h1>{{ _('Drift baselines') }}</h1>
+<p class="muted">
+  Pin a completed scan as the reference for a target; NetVulnX then tracks
+  what changed — new and gone findings, opened and closed ports — against
+  the newest completed scan of that target. One baseline per target.
+</p>
+
+{% if baselines %}
+<table>
+  <tr><th>{{ _('Target') }}</th><th>{{ _('Baseline scan') }}</th><th>{{ _('Pinned') }}</th><th>{{ _('Note') }}</th><th></th></tr>
+  {% for b in baselines %}
+  <tr>
+    <td><code>{{ b.target }}</code></td>
+    <td><a href="{{ url_for('main.scan_detail', scan_id=b.scan_id) }}">{{ b.scan.name }}</a></td>
+    <td class="muted small">{{ b.created_at.strftime("%Y-%m-%d %H:%M") if b.created_at else "" }}</td>
+    <td class="muted small">{{ b.note or "—" }}</td>
+    <td><a class="btn" href="{{ url_for('main.baseline_detail', baseline_id=b.id) }}">{{ _('View drift') }}</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="muted">No baselines yet. Open a completed scan and choose
+<strong>Set as baseline</strong>.</p>
+{% endif %}
+{% endblock %}

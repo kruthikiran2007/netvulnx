@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Drift vs baseline · NetVulnX{% endblock %}
+{% block content %}
+<h1>{{ _('Drift') }}: <code>{{ baseline.target }}</code></h1>
+<p class="muted">
+  Baseline: <a href="{{ url_for('main.scan_detail', scan_id=base_scan.id) }}">{{ base_scan.name }}</a>
+  ({{ base_scan.completed_at.strftime("%Y-%m-%d %H:%M") if base_scan.completed_at else "" }})
+  {% if latest %}
+  vs latest: <a href="{{ url_for('main.scan_detail', scan_id=latest.id) }}">{{ latest.name }}</a>
+  ({{ latest.completed_at.strftime("%Y-%m-%d %H:%M") if latest.completed_at else "" }})
+  {% endif %}
+</p>
+
+{% if result %}
+  {% set before_name = result.summary.before_name %}
+  {% set after_name = result.summary.after_name %}
+  {% include "_diff_result.html" with context %}
+{% else %}
+<p class="muted">No newer completed scan of this target yet — run another
+scan and the drift will appear here.</p>
+{% endif %}
+{% endblock %}

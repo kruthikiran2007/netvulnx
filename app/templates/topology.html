@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Topology · NetVulnX{% endblock %}
+{% block content %}
+<h1>{{ _('Network topology') }}</h1>
+<p class="hint">
+  Every host NetVulnX has actually observed, grouped into /24 zones —
+  {{ host_count }} host{{ "s" if host_count != 1 }} in
+  {{ zone_count }} zone{{ "s" if zone_count != 1 }}.
+</p>
+
+<div class="topo-wrap">{{ svg|safe }}</div>
+
+<div class="auth-box">
+  <h2>{{ _('How to read this map') }}</h2>
+  <ul>
+    <li><strong>Node</strong> = a host we scanned. Border color = worst
+      <em>open</em> finding on that host
+      (<span style="color:#d32f2f">■</span> critical
+      <span style="color:#ef6c00">■</span> high
+      <span style="color:#f9a825">■</span> medium
+      <span style="color:#0288d1">■</span> low
+      <span style="color:#9e9e9e">■</span> none).</li>
+    <li><strong>Zone box</strong> = a /24 subnet derived from the host's own
+      IP — a rough trust boundary, not a discovered VLAN.</li>
+    <li><strong>Line</strong> = the two hosts were observed in the
+      <em>same scan</em>. It is <strong>not</strong> a discovered route,
+      traffic flow, or lateral-movement path — NetVulnX does not map those.</li>
+  </ul>
+</div>
+{% endblock %}

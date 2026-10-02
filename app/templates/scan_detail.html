@@ -123,9 +123,15 @@
 <h2>Findings ({{ findings|length }})</h2>
 {% if findings %}
 <div class="detail-actions">
-  <a class="btn" href="{{ url_for('main.scan_report', scan_id=scan.id) }}">View printable report</a>
-  <a class="btn" href="{{ url_for('main.export_csv', scan_id=scan.id) }}">Export CSV</a>
-  <a class="btn" href="{{ url_for('main.export_json', scan_id=scan.id) }}">Export JSON</a>
+  <a class="btn" href="{{ url_for('main.scan_report', scan_id=scan.id) }}">{{ _("View printable report") }}</a>
+  <a class="btn" href="{{ url_for('main.export_csv', scan_id=scan.id) }}">{{ _("Export CSV") }}</a>
+  <a class="btn" href="{{ url_for('main.export_json', scan_id=scan.id) }}">{{ _("Export JSON") }}</a>
+  {% if scan.status == "completed" %}
+  <form method="post" action="{{ url_for('main.set_baseline', scan_id=scan.id) }}" style="display:inline">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+    <button class="btn" type="submit" title="Pin this scan as the drift baseline for {{ scan.target_raw }}">{{ _("Set as baseline") }}</button>
+  </form>
+  {% endif %}
 </div>
 <div class="remediation">
   <div class="remediation-head">
