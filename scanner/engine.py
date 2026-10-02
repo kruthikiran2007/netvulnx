@@ -27,7 +27,7 @@ from rules import evaluate as evaluate_rules
 from rules.scoring import score_findings
 from scanner import jobs, reachability, portscan, fingerprint
 from scanner import tlscheck, httpcheck, servicecheck
-from scanner import udpprobe, smbcheck, rdpcheck, dbcheck, authchecks
+from scanner import udpprobe, smbcheck, rdpcheck, dbcheck, authchecks, nosqlcheck
 from scanner.targets import parse_target, parse_ports
 from config import Config
 
@@ -160,6 +160,14 @@ def _analyze_service(scan, ip: str, port_num: int, service: str, port_row: Port,
         extra_checks.append(("postgres_ssl", dbcheck.check_postgres))
     if service == "redis" or port_num == 6379:
         extra_checks.append(("redis_ping", dbcheck.check_redis))
+    if service == "mongodb" or port_num == 27017:
+        extra_checks.append(("mongodb_hello", nosqlcheck.check_mongodb))
+    if service == "elasticsearch" or port_num == 9200:
+        extra_checks.append(("elasticsearch_banner",
+                             nosqlcheck.check_elasticsearch))
+    if service == "memcached" or port_num == 11211:
+        extra_checks.append(("memcached_version",
+                             nosqlcheck.check_memcached))
 
     # Authenticated checks (Milestone 21): credentials were supplied on the
     # authorization page and live only in the in-memory vault. They are

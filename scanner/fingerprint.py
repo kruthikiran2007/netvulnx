@@ -148,6 +148,7 @@ _PORT_HINTS = {
     1433: "mssql", 1521: "oracle-db", 3306: "mysql", 3389: "rdp",
     5432: "postgresql", 5900: "vnc", 6379: "redis",
     8080: "http-alt", 8443: "https-alt", 27017: "mongodb", 11211: "memcached",
+    9200: "elasticsearch",
 }
 
 

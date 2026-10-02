@@ -25,9 +25,9 @@ default, an explicit per-scan authorization gate, non-destructive probes,
 bounded concurrency, and no exploitation, brute-force, or evasion
 capabilities of any kind.
 
-The project was built incrementally in twenty-one milestones
+The project was built incrementally in twenty-two milestones
 (Flask + SQLite, Python standard-library networking, pytest, plus
-paramiko for the authenticated SSH audit), finishing with 229 tests
+paramiko for the authenticated SSH audit), finishing with 238 tests
 passing, plus hardening (CSRF, security headers, secret-key hygiene,
 login system with audit log) and a full documentation set.
 
@@ -122,6 +122,7 @@ everything else is HTML.
 | M19 — UDP discovery | DNS/SNMP/NTP/NetBIOS-NS probes; honest open vs open\|filtered; SNMP public-community rule. |
 | M20 — SMB/RDP + resets | Real SMB2/SMB1 negotiate (SMBv1, signing rules) and X.224 RDP handshake (plain/TLS/NLA rules); email password resets with single-use hashed tokens. |
 | M21 — Final five | MySQL/PostgreSQL/Redis analyzers; memory-only authenticated SSH config audit; /24 topology map; per-target drift baselines; English/Hindi i18n. Roadmap 16/16 complete. |
+| M22 — NoSQL analyzers | Real MongoDB wire-protocol hello (BSON/OP_MSG) detecting no-auth exposure + EOL versions; Elasticsearch open-cluster detection; Memcached exposure check. Dockerfile verified (.dockerignore, non-root, volume-backed DB) — image build requires a Docker host. |
 
 ## 6. The rule engine (core contribution)
 
@@ -137,7 +138,7 @@ one. Adding a rule is documented in `RULE_DEVELOPMENT.md` and takes
 
 ## 7. Testing & verification
 
-- **229 tests** (pytest): target parsing, port states, fingerprint
+- **238 tests** (pytest): target parsing, port states, fingerprint
   heuristics, every protocol analyzer (TLS/HTTP/SSH/SMB/RDP/MySQL/
   PostgreSQL/Redis/UDP) against fake wire-protocol servers, every rule
   (positive *and* negative cases), stats/diff/topology/i18n/baseline
@@ -161,7 +162,7 @@ plain-RDP, EOL database versions, passwordless Redis, and weak sshd
 settings — each with accurate evidence and no false positives on clean
 control services. The full workflow (scan → authorize → triage →
 printable report → compare → baseline drift) runs end-to-end in the
-browser, in English or Hindi. All quality gates pass: 229 tests,
+browser, in English or Hindi. All quality gates pass: 238 tests,
 zero fabricated outputs by construction.
 
 ## 9. Limitations

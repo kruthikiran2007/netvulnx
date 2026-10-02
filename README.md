@@ -1,6 +1,6 @@
 # NetVulnX — Network Vulnerability Scanner & Risk Assessment Platform
 
-![tests](https://img.shields.io/badge/tests-229%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-238%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![docker](https://img.shields.io/badge/docker-ready-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -44,6 +44,9 @@ From a real scan of a lab target (11 findings, risk score 13):
   rate-limited, no user enumeration
 - **Database analyzers** — MySQL handshake version/EOL, PostgreSQL TLS probe,
   Redis auth check (all read-only, no login)
+- **NoSQL/search analyzers** — real MongoDB wire-protocol hello (no-auth
+  detection + version), Elasticsearch banner check, Memcached version probe
+  (all read-only, no login)
 - **Authenticated checks** — optional SSH credentials (memory-only, never
   stored) for a read-only `sshd -T` config audit
 - **Network topology** — observed hosts grouped in /24 zones, server-side SVG
@@ -80,7 +83,7 @@ From a real scan of a lab target (11 findings, risk score 13):
    finding severities, not a black box.
 4. **Safety is a feature.** Target scope validation, an explicit
    authorization gate before any packet is sent, no brute force, no
-   exploitation, no DoS — enforced in code and tested (229 unit tests).
+   exploitation, no DoS — enforced in code and tested (238 unit tests).
 
 ## Safety first
 
@@ -133,7 +136,7 @@ netvulnx/
 ├── rules/                 # deterministic rule engine (TLS/HTTP/service/
 │                          #   CVE/SSH rules + risk scoring)
 ├── migrations/            # Alembic versioned schema migrations
-├── tests/                 # 229 pytest unit tests
+├── tests/                 # 238 pytest unit tests
 └── docs/                  # architecture, testing, security, deployment…
 ```
 
@@ -151,7 +154,7 @@ netvulnx/
 | 8 | Authentication + prod server | 17 | Docker deployment |
 | 9 | CVE mapping (NVD) | 18 | SSH algorithm analyzer |
 | 20 | SMB/RDP analyzers + email password resets | 19 | UDP service discovery |
-| 21 | DB analyzers, auth checks, topology, baselines, i18n |  |  |
+| 21 | DB analyzers, auth checks, topology, baselines, i18n | 22 | NoSQL analyzers (MongoDB/ES/Memcached) |
 
 ## Documentation
 

@@ -365,6 +365,17 @@ def test_rules_against_real_model_attributes(monkeypatch):
                                        "permitrootlogin": "yes",
                                        "passwordauthentication": "yes",
                                        "x11forwarding": "yes"}})
+    # NoSQL: exposed MongoDB / Elasticsearch / Memcached.
+    matched |= _smbrdp_ctx_matches(27017, "mongodb", "mongodb_hello",
+                                   {"auth_required": False,
+                                    "server_version": "5.0.28"})
+    matched |= _smbrdp_ctx_matches(9200, "elasticsearch",
+                                   "elasticsearch_banner",
+                                   {"auth_required": False,
+                                    "server_version": "7.17.10"})
+    matched |= _smbrdp_ctx_matches(11211, "memcached", "memcached_version",
+                                   {"auth_required": False,
+                                    "server_version": "1.6.22"})
     # http-no-https-redirect is https-only by design; everything else fires.
     expected = {r["id"] for r in rules.ALL_RULES} - {"http-no-https-redirect"}
     assert matched == expected, f"missing: {expected - matched}"
