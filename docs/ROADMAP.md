@@ -33,8 +33,11 @@ present. Ordered roughly by value-to-effort for a student project.
 
 ## High value, higher effort
 
-- [ ] **UDP scanning.** Proper UDP service discovery (with retransmits and
-  ICMP handling) — a genuinely hard problem, good dissertation material.
+- [x] **UDP service discovery (done, Milestone 19).** Protocol-specific
+  probes (DNS version.bind, SNMP sysDescr, NTP, NetBIOS-NS) with honest
+  `open` vs `open|filtered` semantics — silence is never stored as a
+  finding. SNMP `public` community flagged high. Unprivileged (no raw
+  sockets); ICMP-based closed-port confirmation remains future work.
 - [ ] **Authenticated checks.** Optional, user-supplied credentials for
   deeper assessment (SSH config audit, SMB signing checks) — with the
   secrets handled via the Secure Vault pattern, never stored in plaintext.

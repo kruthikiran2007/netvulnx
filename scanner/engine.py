@@ -27,6 +27,7 @@ from rules import evaluate as evaluate_rules
 from rules.scoring import score_findings
 from scanner import jobs, reachability, portscan, fingerprint
 from scanner import tlscheck, httpcheck, servicecheck
+from scanner import udpprobe
 from scanner.targets import parse_target, parse_ports
 from config import Config
 
@@ -335,6 +336,49 @@ def _run(scan_id: int, cancel_event):
                 return
             scan.current_stage = (f"Rule evaluation {ip}:{port} "
                                   f"({j + 1}/{len(open_ports)})")
+            _evaluate_rules(scan, asset, port_row)
+            db.session.commit()
+
+        # ---- Phase 3d: UDP service discovery (Milestone 19) ----
+        # Only confirmed responses are stored; silent ports are "open|filtered"
+        # and recorded nowhere (silence is not evidence).
+        udp_ports = Config.DEFAULT_UDP_PORTS
+        for port in udp_ports:
+            if _cancelled(scan, cancel_event):
+                return
+            scan.current_stage = f"UDP discovery {ip}:{port}/udp"
+            db.session.commit()
+            try:
+                res = udpprobe.probe_udp(ip, port,
+                                         timeout=Config.UDP_PROBE_TIMEOUT)
+            except Exception as exc:  # belt and braces: record, don't crash
+                res = {"port": port, "service": f"udp-{port}",
+                       "state": "open|filtered", "details": {},
+                       "error": f"{type(exc).__name__}: {exc}"}
+            if res["state"] != "open":
+                continue
+            port_row = Port(
+                scan_id=scan.id,
+                asset_id=asset.id,
+                port=port,
+                protocol="udp",
+                state="open",
+                service=res["service"],
+                confidence=90,  # well-formed protocol response
+                banner=(res["details"].get("version")
+                        or res["details"].get("sysDescr")
+                        or res["service"])[:200],
+                method="udp-probe",
+            )
+            db.session.add(port_row)
+            db.session.flush()
+            db.session.add(ServiceCheck(
+                port_id=port_row.id,
+                check_type="udp_probe",
+                summary=f"UDP/{port} {res['service']} answered probe",
+                details=json.dumps(res, default=str),
+            ))
+            db.session.flush()
             _evaluate_rules(scan, asset, port_row)
             db.session.commit()
 

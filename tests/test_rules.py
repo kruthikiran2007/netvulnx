@@ -251,6 +251,22 @@ def test_open_port_alone_produces_no_findings():
     assert rules.evaluate(ctx) == []
 
 
+def _udp_ctx_matches(port_num, service, details):
+    """Evaluate the rules against one UDP port context; return matched ids."""
+    from app.models import Port, ServiceCheck
+    udp_port = Port(port=port_num, protocol="udp", service=service)
+    udp_checks = {
+        "udp_probe": ServiceCheck(
+            check_type="udp_probe",
+            summary=f"UDP/{port_num} {service} answered probe",
+            details=json.dumps({"port": port_num, "service": service,
+                                "state": "open", "details": details})),
+    }
+    udp_ctx = {"tls": None, "http": None, "checks": udp_checks,
+               "target": "127.0.0.1", "port": udp_port}
+    return {r["id"] for r, _ in rules.evaluate(udp_ctx)}
+
+
 def test_rules_against_real_model_attributes(monkeypatch):
     """Regression test: run the rules against REAL (unpersisted) SQLAlchemy
     model instances, not test doubles. evaluate() swallows per-rule
@@ -301,6 +317,12 @@ def test_rules_against_real_model_attributes(monkeypatch):
     ctx = {"tls": tls, "http": http, "checks": checks, "target": "127.0.0.1",
            "port": port}
     matched = {r["id"] for r, _ in rules.evaluate(ctx)}
+    # The two UDP rules are mutually exclusive by design (the generic
+    # udp-service-exposed stays silent when snmp-public-community fires),
+    # so evaluate two UDP contexts and union the matches.
+    matched |= _udp_ctx_matches(161, "snmp", {"community": "public",
+                                              "sysDescr": "FakeSNMP"})
+    matched |= _udp_ctx_matches(123, "ntp", {"stratum": 2, "version": 4})
     # http-no-https-redirect is https-only by design; everything else fires.
     expected = {r["id"] for r in rules.ALL_RULES} - {"http-no-https-redirect"}
     assert matched == expected, f"missing: {expected - matched}"

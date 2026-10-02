@@ -54,6 +54,8 @@ class Config:
     TLS_TIMEOUT = 5.0            # seconds for a TLS handshake
     HTTP_TIMEOUT = 5.0           # seconds for an HTTP request
     SERVICE_CHECK_TIMEOUT = 5.0  # seconds for DNS/SMTP/FTP checks
+    UDP_PROBE_TIMEOUT = 2.0    # seconds per UDP probe attempt
+    DEFAULT_UDP_PORTS = (53, 123, 137, 161)  # UDP discovery set
 
     # --- Scan profiles: each has clearly defined behavior ---
     SCAN_PROFILES = {

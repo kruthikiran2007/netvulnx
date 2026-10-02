@@ -33,6 +33,9 @@ From a real scan of a lab target (11 findings, risk score 13):
   grades key exchange, host-key, cipher and MAC algorithms, with exact
   `sshd_config` remediation. No login attempted, ever
 - Safe service checks: DNS version, SMTP STARTTLS/EHLO, FTP anonymous login
+- **UDP service discovery** — protocol probes (DNS, SNMP, NTP, NetBIOS-NS)
+  with honest open vs open|filtered semantics; default SNMP community
+  detection
 - CVE mapping: product+version → real NVD lookups with CVSS-based severity
   (7-day cache, honest "likely" confidence — never fabricated)
 
@@ -134,6 +137,7 @@ netvulnx/
 | 7 | Testing + hardening + docs | 16 | Webhook notifications |
 | 8 | Authentication + prod server | 17 | Docker deployment |
 | 9 | CVE mapping (NVD) | 18 | SSH algorithm analyzer |
+| 10 | Scheduled scans + drift alerts | 19 | UDP service discovery |
 
 ## Documentation
 
