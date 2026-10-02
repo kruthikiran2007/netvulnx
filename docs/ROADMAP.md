@@ -16,7 +16,8 @@ present. Ordered roughly by value-to-effort for a student project.
 - [x] **Authentication.** ~~Login (even simple local accounts) so the app can
   leave localhost safely.~~ Done in Milestone 8: first-run admin setup,
   salted password hashing, login gate, audit log (see AUTHENTICATION.md).
-  Remaining: password reset via email (needs an SMTP story).
+  Done in Milestone 20: email password resets — single-use hashed
+  tokens, 1-hour expiry, rate-limited, SMTP via NETVULNX_SMTP_*.
 - [x] **Scheduled / recurring scans.** ~~Cron-like scheduling with drift
   alerts ("new finding since last Tuesday").~~ Done in Milestone 10:
   APScheduler ticker runs due schedules (daily/weekly); creation requires
@@ -44,8 +45,10 @@ present. Ordered roughly by value-to-effort for a student project.
 - [x] **SSH algorithm analyzer (done, Milestone 18).** Real version +
   KEXINIT handshake, grades key exchange / host keys / ciphers / MACs —
   read-only, no login attempted.
-- [ ] **More protocol analyzers.** SMB, RDP (CredSSP/TLS posture),
-  database banners (MySQL/Postgres/Redis) —
+- [x] **SMB + RDP analyzers (done, Milestone 20).** Real SMB2/SMB1
+  negotiate and X.224 handshakes, read-only, no credentials — SMBv1
+  detection, signing checks, RDP plain/TLS/NLA grading.
+- [ ] **More protocol analyzers.** database banners (MySQL/Postgres/Redis),
   read-only, same philosophy as the existing checks.
 - [ ] **Network topology view.** Host relationships and trust zones from
   scan data.

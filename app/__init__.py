@@ -65,7 +65,9 @@ def create_app(config_class=None):
         from app import auth as _auth
         from app.models import User as _User
         path = _request.path
-        if path.startswith("/static/") or path in ("/login", "/setup"):
+        if path.startswith("/static/") or path in ("/login", "/setup",
+                                                       "/forgot-password") \
+                or path.startswith("/reset-password/"):
             return None
         if _User.query.count() == 0:
             return _redirect(_url_for("main.setup"))
@@ -155,6 +157,7 @@ def _ensure_columns(app):
         ("findings", "status", "VARCHAR(20) NOT NULL DEFAULT 'open'"),
         ("findings", "status_note", "TEXT"),
         ("findings", "status_updated_at", "DATETIME"),
+        ("users", "email", "VARCHAR(255)"),  # Milestone 20: password resets
     ]
     with db.engine.connect() as conn:
         for table, column, ctype in new_columns:

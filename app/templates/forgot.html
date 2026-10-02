@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Forgot password — NetVulN{% endblock %}
+{% block content %}
+<h1>Forgot your password?</h1>
+{% if smtp_enabled %}
+<p class="muted">Enter your username and we'll email you a reset link. The link works once and expires after one hour.</p>
+<form method="post" action="{{ url_for('main.forgot_submit') }}" class="card">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <label>Username
+    <input type="text" name="username" required autocomplete="username" autofocus>
+  </label>
+  <button type="submit" class="btn">Send reset link</button>
+</form>
+{% else %}
+<p class="muted">Password resets by email are not enabled on this server. Ask your NetVulnX administrator to reset your password, or to configure email delivery (see the deployment guide).</p>
+{% endif %}
+<p><a href="{{ url_for('main.login') }}">Back to log in</a></p>
+{% endblock %}

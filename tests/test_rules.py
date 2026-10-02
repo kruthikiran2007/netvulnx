@@ -267,6 +267,20 @@ def _udp_ctx_matches(port_num, service, details):
     return {r["id"] for r, _ in rules.evaluate(udp_ctx)}
 
 
+def _smbrdp_ctx_matches(port_num, service, check_type, details):
+    """Evaluate the rules against one SMB/RDP port context; return ids."""
+    from app.models import Port, ServiceCheck
+    port = Port(port=port_num, protocol="tcp", service=service)
+    checks = {
+        check_type: ServiceCheck(
+            check_type=check_type, summary="fake",
+            details=json.dumps(details)),
+    }
+    ctx = {"tls": None, "http": None, "checks": checks,
+           "target": "127.0.0.1", "port": port}
+    return {r["id"] for r, _ in rules.evaluate(ctx)}
+
+
 def test_rules_against_real_model_attributes(monkeypatch):
     """Regression test: run the rules against REAL (unpersisted) SQLAlchemy
     model instances, not test doubles. evaluate() swallows per-rule
@@ -323,6 +337,20 @@ def test_rules_against_real_model_attributes(monkeypatch):
     matched |= _udp_ctx_matches(161, "snmp", {"community": "public",
                                               "sysDescr": "FakeSNMP"})
     matched |= _udp_ctx_matches(123, "ntp", {"stratum": 2, "version": 4})
+    # SMB: a vulnerable server (SMBv1 on, signing not required) trips both.
+    matched |= _smbrdp_ctx_matches(445, "smb", "smb_negotiate",
+                                   {"dialect": 528, "dialect_name": "SMB 2.1",
+                                    "signing_enabled": True,
+                                    "signing_required": False,
+                                    "smbv1_enabled": True})
+    # RDP: plain-RDP and TLS-without-NLA are mutually exclusive selections,
+    # so evaluate both and union the matches.
+    matched |= _smbrdp_ctx_matches(3389, "rdp", "rdp_negotiate",
+                                   {"selected_protocol": 0,
+                                    "selected_name": "plain RDP (no TLS)"})
+    matched |= _smbrdp_ctx_matches(3389, "rdp", "rdp_negotiate",
+                                   {"selected_protocol": 1,
+                                    "selected_name": "TLS without NLA"})
     # http-no-https-redirect is https-only by design; everything else fires.
     expected = {r["id"] for r in rules.ALL_RULES} - {"http-no-https-redirect"}
     assert matched == expected, f"missing: {expected - matched}"

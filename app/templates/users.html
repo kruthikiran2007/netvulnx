@@ -19,6 +19,11 @@ manages users, tokens, and the audit log.</p>
     <span class="hint">At least 8 characters. Share it securely — the user should change it.</span>
   </label>
   <label>
+    Email (optional)
+    <input type="email" name="email" maxlength="255" placeholder="analyst@company.com">
+    <span class="hint">Needed for "Forgot password?" reset emails.</span>
+  </label>
+  <label>
     Role
     <select name="role">
       {% for r in roles %}

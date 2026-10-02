@@ -72,7 +72,25 @@ Before it leaves your machine:
 
 ## What's still ahead
 
-- Password reset / change flows (today: recreate the account).
 - Roles beyond admin/regular (viewer, operator) — Phase 3.
 - Brute-force throttling on /login (rate limiting) — recommended next.
 - See ROADMAP.md for the full plan.
+
+## Password resets by email
+
+Users who forget their password click **"Forgot your password?"** on the
+login page. The flow is designed to be safe:
+
+- The reply message is identical whether the username exists or not —
+  no user enumeration.
+- Only the SHA-256 **hash** of the reset token is stored; a database
+  leak alone can't reset anyone's password.
+- Links are single-use and expire after **1 hour**; using one burns it
+  and every other outstanding link for that account.
+- At most **5 reset emails per hour** per account (abuse control).
+- Every request and completion is written to the audit log.
+
+To enable it, set the SMTP variables (see DEPLOYMENT.md). Without them,
+the forgot-password page honestly says email isn't configured. Users
+need an email address on file — set it when the admin creates the
+account, or on the account page ("Reset email").

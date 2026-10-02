@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Set a new password — NetVulN{% endblock %}
+{% block content %}
+<h1>Set a new password</h1>
+<p class="muted">This link works once. After you set the new password, it stops working.</p>
+<form method="post" action="{{ url_for('main.reset_submit', token=token) }}" class="card">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <label>New password
+    <input type="password" name="new_password" required autocomplete="new-password" autofocus>
+    <span class="hint">At least 8 characters.</span>
+  </label>
+  <button type="submit" class="btn">Set new password</button>
+</form>
+{% endblock %}

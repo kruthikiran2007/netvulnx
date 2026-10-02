@@ -10,7 +10,8 @@ GET /api/scans/<id>/status for live progress.
 """
 import math
 import json
-from datetime import datetime, timezone
+import secrets
+from datetime import datetime, timezone, timedelta
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, jsonify, abort, session)
@@ -19,9 +20,10 @@ from sqlalchemy import func
 
 from app import db
 from app import auth as auth_lib
+from app import mail as mail_lib
 from app.models import (Scan, Asset, Port, Finding, FINDING_STATUSES,
                         CLOSED_STATUSES, User, AuditEvent, ScheduledScan,
-                        ApiToken)
+                        ApiToken, PasswordResetToken)
 from app.drift import drift_for_scan
 from app.stats import (severity_counts, worst_severity, service_exposure,
                        inventory_rows, risk_history, recent_findings)
@@ -534,13 +536,146 @@ def logout():
     return redirect(url_for("main.login"))
 
 
+# ---------------------------------------------------------------------------
+# Password reset by email (Milestone 20)
+# ---------------------------------------------------------------------------
+
+def _utcnow():
+    return datetime.now(timezone.utc)
+
+
+def _find_reset_token(raw):
+    """Return the live PasswordResetToken for a raw token string, or None."""
+    if not raw or len(raw) > 128:
+        return None
+    rec = PasswordResetToken.query.filter_by(
+        token_hash=auth_lib.hash_token(raw)).first()
+    if rec is None or not rec.is_valid:
+        return None
+    return rec
+
+
+@bp.get("/forgot-password")
+def forgot_form():
+    """Ask for a username; email a reset link if the account can receive one."""
+    if auth_lib.current_user():
+        return redirect(url_for("main.dashboard"))
+    return render_template("forgot.html",
+                           smtp_enabled=current_app.config.get("SMTP_ENABLED"))
+
+
+@bp.post("/forgot-password")
+def forgot_submit():
+    if auth_lib.current_user():
+        return redirect(url_for("main.dashboard"))
+    username = request.form.get("username", "").strip()
+    # The reply is ALWAYS the same: we never reveal whether the username
+    # exists, has an email, or was rate-limited (no user enumeration).
+    reply = ("If an account with that username exists and has an email "
+             "address on file, a password-reset link is on its way. The "
+             "link expires in one hour.")
+    user = User.query.filter_by(username=username).first()
+    if user and user.email and current_app.config.get("SMTP_ENABLED"):
+        hour_ago = _utcnow() - timedelta(hours=1)
+        recent = PasswordResetToken.query.filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.created_at > hour_ago).count()
+        if recent < current_app.config.get("RESET_MAX_PER_HOUR", 5):
+            raw = secrets.token_urlsafe(32)
+            rec = PasswordResetToken(
+                user_id=user.id,
+                token_hash=auth_lib.hash_token(raw),
+                expires_at=_utcnow() + timedelta(
+                    seconds=current_app.config.get("RESET_TOKEN_TTL_SECONDS", 3600)))
+            db.session.add(rec)
+            db.session.commit()
+            reset_url = url_for("main.reset_form", token=raw, _external=True)
+            ok, err = mail_lib.send_password_reset(
+                user.email, user.username, reset_url)
+            if not ok:
+                # The email failed; burn the token so a dead link can't
+                # linger, and keep the generic reply (the log has details).
+                rec.used_at = _utcnow()
+                db.session.commit()
+                current_app.logger.warning(
+                    "password reset email failed for '%s': %s",
+                    username, err)
+            auth_lib.log_audit("password.reset_requested",
+                               f"username '{username}'", actor=username)
+    flash(reply, "info")
+    return render_template("forgot.html", smtp_enabled=current_app.config.get("SMTP_ENABLED"))
+
+
+@bp.get("/reset-password/<token>")
+def reset_form(token):
+    if auth_lib.current_user():
+        return redirect(url_for("main.dashboard"))
+    if _find_reset_token(token) is None:
+        flash("That reset link is invalid or has expired — request a new "
+              "one.", "error")
+        return redirect(url_for("main.forgot_form"))
+    return render_template("reset.html", token=token)
+
+
+@bp.post("/reset-password/<token>")
+def reset_submit(token):
+    if auth_lib.current_user():
+        return redirect(url_for("main.dashboard"))
+    rec = _find_reset_token(token)
+    if rec is None:
+        flash("That reset link is invalid or has expired — request a new "
+              "one.", "error")
+        return render_template("forgot.html",
+                               smtp_enabled=current_app.config.get("SMTP_ENABLED")), 401
+    new = request.form.get("new_password", "")
+    if not auth_lib.valid_password(new):
+        flash("The new password must be at least 8 characters.", "error")
+        return render_template("reset.html", token=token), 400
+    user = rec.user
+    if auth_lib.verify_password(user, new):
+        flash("The new password can't be the same as the current one.",
+              "error")
+        return render_template("reset.html", token=token), 400
+    user.password_hash = auth_lib.hash_password(new)
+    # Single-use: burn this token and every other outstanding token for the
+    # same account, so old links die with the password change.
+    now = _utcnow()
+    rec.used_at = now
+    for other in PasswordResetToken.query.filter_by(
+            user_id=user.id, used_at=None).all():
+        other.used_at = now
+    db.session.commit()
+    auth_lib.log_audit("password.reset_completed", "",
+                       actor=user.username)
+    flash("Password reset — log in with your new password.", "info")
+    return redirect(url_for("main.login"))
+
+
 @bp.get("/account/password")
 def password_form():
     """Change your own password (Milestone 13)."""
     user = auth_lib.current_user()
     if not user:
         return redirect(url_for("main.login"))
-    return render_template("password.html")
+    return render_template("password.html", current_email=user.email)
+
+
+@bp.post("/account/email")
+def email_submit():
+    """Set your own reset-email address (Milestone 20)."""
+    user = auth_lib.current_user()
+    if not user:
+        return redirect(url_for("main.login"))
+    email = request.form.get("email", "").strip() or None
+    if email and ("@" not in email or "." not in email.split("@")[-1]):
+        flash("That email address doesn't look valid.", "error")
+        return render_template("password.html",
+                               current_email=user.email), 400
+    user.email = email
+    db.session.commit()
+    auth_lib.log_audit("account.email_updated", "", actor=user.username)
+    flash("Email address saved.", "info")
+    return redirect(url_for("main.password_form"))
 
 
 @bp.post("/account/password")
@@ -793,6 +928,10 @@ def user_create():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
     role = request.form.get("role", "operator")
+    email = request.form.get("email", "").strip() or None
+    if email and ("@" not in email or "." not in email.split("@")[-1]):
+        flash("That email address doesn't look valid.", "error")
+        return redirect(url_for("main.user_list"))
     if not auth_lib.valid_username(username):
         flash("Username: 3-40 characters, letters/digits/_/-.", "error")
         return redirect(url_for("main.user_list"))
@@ -805,7 +944,8 @@ def user_create():
         flash("That username is taken.", "error")
         return redirect(url_for("main.user_list"))
     user = User(username=username,
-                password_hash=auth_lib.hash_password(password), role=role)
+                password_hash=auth_lib.hash_password(password), role=role,
+                email=email)
     db.session.add(user)
     db.session.commit()
     auth_lib.log_audit("user.created",

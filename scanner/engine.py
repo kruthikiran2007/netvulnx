@@ -27,7 +27,7 @@ from rules import evaluate as evaluate_rules
 from rules.scoring import score_findings
 from scanner import jobs, reachability, portscan, fingerprint
 from scanner import tlscheck, httpcheck, servicecheck
-from scanner import udpprobe
+from scanner import udpprobe, smbcheck, rdpcheck
 from scanner.targets import parse_target, parse_ports
 from config import Config
 
@@ -150,6 +150,10 @@ def _analyze_service(scan, ip: str, port_num: int, service: str, port_row: Port,
         extra_checks.append(("dns_version", servicecheck.check_dns_version))
     if service == "ssh" or port_num == 22:
         extra_checks.append(("ssh_algorithms", servicecheck.check_ssh_algorithms))
+    if service == "smb" or port_num == 445:
+        extra_checks.append(("smb_negotiate", smbcheck.check_smb))
+    if service == "rdp" or port_num == 3389:
+        extra_checks.append(("rdp_negotiate", rdpcheck.check_rdp))
 
     for check_type, fn in extra_checks:
         if cancel_event.is_set():

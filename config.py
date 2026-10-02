@@ -54,6 +54,23 @@ class Config:
     TLS_TIMEOUT = 5.0            # seconds for a TLS handshake
     HTTP_TIMEOUT = 5.0           # seconds for an HTTP request
     SERVICE_CHECK_TIMEOUT = 5.0  # seconds for DNS/SMTP/FTP checks
+
+    # --- Email / password resets (Milestone 20) ---
+    # Set these to enable "Forgot password?" emails. If SMTP_HOST is empty,
+    # the feature is disabled and the login page says so honestly.
+    #   NETVULNX_SMTP_HOST / _PORT / _USERNAME / _PASSWORD / _FROM
+    #   NETVULNX_SMTP_USE_TLS=0 to disable STARTTLS (not recommended)
+    SMTP_HOST = os.environ.get("NETVULNX_SMTP_HOST", "")
+    SMTP_PORT = int(os.environ.get("NETVULNX_SMTP_PORT", "587"))
+    SMTP_USERNAME = os.environ.get("NETVULNX_SMTP_USERNAME", "")
+    SMTP_PASSWORD = os.environ.get("NETVULNX_SMTP_PASSWORD", "")
+    SMTP_FROM = os.environ.get("NETVULNX_SMTP_FROM", "netvulnx@localhost")
+    SMTP_USE_TLS = os.environ.get("NETVULNX_SMTP_USE_TLS", "1") == "1"
+    SMTP_ENABLED = bool(SMTP_HOST)
+    # Reset links stay valid for one hour; at most 5 reset emails per hour
+    # per account to stop abuse.
+    RESET_TOKEN_TTL_SECONDS = 3600
+    RESET_MAX_PER_HOUR = 5
     UDP_PROBE_TIMEOUT = 2.0    # seconds per UDP probe attempt
     DEFAULT_UDP_PORTS = (53, 123, 137, 161)  # UDP discovery set
 

@@ -312,12 +312,40 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="operator")
+    email = db.Column(db.String(255), nullable=True)  # for password resets
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
 
     @property
     def is_admin(self):
         # Kept for templates and older code paths: admin ⟺ role "admin".
         return self.role == "admin"
+
+
+class PasswordResetToken(db.Model):
+    """Single-use password-reset token (Milestone 20).
+
+    Only the SHA-256 hash is stored — a database leak alone can't reset
+    anyone's password. Tokens expire after one hour and are marked used
+    the moment they succeed, so a link can't be replayed.
+    """
+    __tablename__ = "password_reset_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    token_hash = db.Column(db.String(64), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship("User", backref="reset_tokens")
+
+    @property
+    def is_valid(self):
+        # SQLite returns naive datetimes; treat stored values as UTC.
+        expires = self.expires_at
+        if expires is not None and expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return self.used_at is None and expires > _utcnow()
 
 
 class AuditEvent(db.Model):

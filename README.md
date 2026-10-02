@@ -1,6 +1,6 @@
 # NetVulnX — Network Vulnerability Scanner & Risk Assessment Platform
 
-![tests](https://img.shields.io/badge/tests-158%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-189%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![docker](https://img.shields.io/badge/docker-ready-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -36,6 +36,12 @@ From a real scan of a lab target (11 findings, risk score 13):
 - **UDP service discovery** — protocol probes (DNS, SNMP, NTP, NetBIOS-NS)
   with honest open vs open|filtered semantics; default SNMP community
   detection
+- **SMB analyzer** — real SMB2/SMB1 negotiate handshakes (no auth): SMBv1
+  detection, signing-required check, dialect grading
+- **RDP analyzer** — real X.224 handshake (no auth): detects plain-RDP
+  vs TLS vs NLA (CredSSP) negotiation
+- **Email password resets** — single-use hashed tokens, 1-hour expiry,
+  rate-limited, no user enumeration
 - CVE mapping: product+version → real NVD lookups with CVSS-based severity
   (7-day cache, honest "likely" confidence — never fabricated)
 
@@ -67,7 +73,7 @@ From a real scan of a lab target (11 findings, risk score 13):
    finding severities, not a black box.
 4. **Safety is a feature.** Target scope validation, an explicit
    authorization gate before any packet is sent, no brute force, no
-   exploitation, no DoS — enforced in code and tested (158 unit tests).
+   exploitation, no DoS — enforced in code and tested (189 unit tests).
 
 ## Safety first
 
@@ -120,7 +126,7 @@ netvulnx/
 ├── rules/                 # deterministic rule engine (TLS/HTTP/service/
 │                          #   CVE/SSH rules + risk scoring)
 ├── migrations/            # Alembic versioned schema migrations
-├── tests/                 # 158 pytest unit tests
+├── tests/                 # 189 pytest unit tests
 └── docs/                  # architecture, testing, security, deployment…
 ```
 
@@ -137,7 +143,7 @@ netvulnx/
 | 7 | Testing + hardening + docs | 16 | Webhook notifications |
 | 8 | Authentication + prod server | 17 | Docker deployment |
 | 9 | CVE mapping (NVD) | 18 | SSH algorithm analyzer |
-| 10 | Scheduled scans + drift alerts | 19 | UDP service discovery |
+| 20 | SMB/RDP analyzers + email password resets | 19 | UDP service discovery |
 
 ## Documentation
 

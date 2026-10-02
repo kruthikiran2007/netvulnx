@@ -78,6 +78,12 @@ systemctl enable --now netvulnx
 | `NETVULNX_DB_PATH` | `<project>/netvulnx.db` | Where the SQLite database lives (Docker: `/data/netvulnx.db`). |
 | `NETVULNX_COOKIE_SECURE` | `0` | Set to `1` when serving over HTTPS — cookies then only travel over TLS. |
 | `NETVULNX_DEBUG` | unset | Set to `1` for Flask's dev server (never in production). |
+| `NETVULNX_SMTP_HOST` | unset | SMTP server for password-reset emails. **Unset = resets disabled** (the login page says so). |
+| `NETVULNX_SMTP_PORT` | `587` | SMTP port (STARTTLS). |
+| `NETVULNX_SMTP_USERNAME` | unset | SMTP login (optional — leave unset for open relays you trust). |
+| `NETVULNX_SMTP_PASSWORD` | unset | SMTP password. |
+| `NETVULNX_SMTP_FROM` | `netvulnx@localhost` | The `From:` address on reset emails. |
+| `NETVULNX_SMTP_USE_TLS` | `1` | Set to `0` to disable STARTTLS (not recommended). |
 
 ## Pre-flight checklist for company use
 
