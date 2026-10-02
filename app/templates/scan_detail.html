@@ -124,6 +124,8 @@
 {% if findings %}
 <div class="detail-actions">
   <a class="btn" href="{{ url_for('main.scan_report', scan_id=scan.id) }}">View printable report</a>
+  <a class="btn" href="{{ url_for('main.export_csv', scan_id=scan.id) }}">Export CSV</a>
+  <a class="btn" href="{{ url_for('main.export_json', scan_id=scan.id) }}">Export JSON</a>
 </div>
 <div class="remediation">
   <div class="remediation-head">

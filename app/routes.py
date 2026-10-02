@@ -9,6 +9,7 @@ so the authorize POST returns immediately and the detail page polls
 GET /api/scans/<id>/status for live progress.
 """
 import math
+import json
 from datetime import datetime, timezone
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -604,3 +605,36 @@ def schedule_delete(schedule_id):
     auth_lib.log_audit("schedule.deleted", f"schedule #{schedule_id} '{name}'")
     flash(f"Schedule '{name}' deleted.", "info")
     return redirect(url_for("main.schedule_list"))
+
+
+# ---------------- Milestone 11: exports ----------------
+
+def _export_filename(scan, ext):
+    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in scan.name)
+    return f"netvulnx-scan-{scan.id}-{safe[:40]}.{ext}"
+
+
+@bp.get("/scans/<int:scan_id>/export.csv")
+def export_csv(scan_id):
+    """Download all findings as CSV (for spreadsheets / ticketing tools)."""
+    from app.exports import findings_csv
+    scan = Scan.query.get_or_404(scan_id)
+    csv_text = findings_csv(scan)
+    return current_app.response_class(
+        csv_text,
+        mimetype="text/csv",
+        headers={"Content-Disposition":
+                 f"attachment; filename={_export_filename(scan, 'csv')}"})
+
+
+@bp.get("/scans/<int:scan_id>/export.json")
+def export_json(scan_id):
+    """Download the full scan (metadata, assets, findings) as JSON."""
+    from app.exports import scan_json
+    scan = Scan.query.get_or_404(scan_id)
+    body = json.dumps(scan_json(scan), indent=2)
+    return current_app.response_class(
+        body,
+        mimetype="application/json",
+        headers={"Content-Disposition":
+                 f"attachment; filename={_export_filename(scan, 'json')}"})
