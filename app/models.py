@@ -335,3 +335,22 @@ class CveCache(db.Model):
     cpe = db.Column(db.String(200), primary_key=True)
     payload = db.Column(db.Text, nullable=False)  # JSON list of CVE dicts
     fetched_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+
+class LoginThrottle(db.Model):
+    """Brute-force protection (Milestone 13): one row per username+IP.
+
+    After MAX_FAILED_LOGINS failures the key is locked until locked_until.
+    Keyed on username+IP (not username alone) so an attacker can't lock a
+    victim out of their own account from across the network.
+    """
+    __tablename__ = "login_throttles"
+
+    key = db.Column(db.String(160), primary_key=True)  # "username|ip"
+    attempts = db.Column(db.Integer, nullable=False, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
+    updated_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+    @staticmethod
+    def make_key(username, ip):
+        return f"{(username or '').lower()}|{ip or ''}"

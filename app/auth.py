@@ -16,11 +16,18 @@ these rows.
 from flask import request, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from datetime import datetime, timezone, timedelta
+
 from app import db
-from app.models import User, AuditEvent
+from app.models import User, AuditEvent, LoginThrottle
 
 #: Session key holding the logged-in user's id (nothing else).
 SESSION_KEY = "user_id"
+
+#: Brute-force protection (Milestone 13): this many failures from one
+#: username+IP locks that combination out for this long.
+MAX_FAILED_LOGINS = 5
+LOGIN_LOCKOUT = timedelta(minutes=15)
 
 
 def hash_password(password):
@@ -78,3 +85,53 @@ def valid_username(username):
 def valid_password(password):
     """Minimum bar: at least 8 characters. (Length beats complexity.)"""
     return bool(password) and len(password) >= 8
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
+
+
+def throttle_status(username, ip):
+    """(locked: bool, remaining: timedelta|None) for this username+IP."""
+    row = db.session.get(LoginThrottle, LoginThrottle.make_key(username, ip))
+    if row and row.locked_until:
+        locked_until = row.locked_until.replace(tzinfo=timezone.utc)
+        now = _utcnow()
+        if locked_until > now:
+            return True, locked_until - now
+    return False, None
+
+
+def record_failed_login(username, ip):
+    """Count a failure; lock the username+IP after too many. Returns True
+    if this failure triggered a fresh lockout."""
+    key = LoginThrottle.make_key(username, ip)
+    row = db.session.get(LoginThrottle, key)
+    now = _utcnow()
+    if row is None:
+        row = LoginThrottle(key=key, attempts=1, updated_at=now)
+        db.session.add(row)
+    else:
+        # A lockout that expired starts the count over.
+        if row.locked_until and row.locked_until.replace(
+                tzinfo=timezone.utc) <= now:
+            row.attempts = 1
+            row.locked_until = None
+        else:
+            row.attempts += 1
+        row.updated_at = now
+    locked_now = False
+    if row.attempts >= MAX_FAILED_LOGINS and not row.locked_until:
+        row.locked_until = now + LOGIN_LOCKOUT
+        locked_now = True
+    db.session.commit()
+    return locked_now
+
+
+def clear_throttle(username, ip):
+    """A successful login wipes the failure count for this username+IP."""
+    row = db.session.get(LoginThrottle,
+                         LoginThrottle.make_key(username, ip))
+    if row:
+        db.session.delete(row)
+        db.session.commit()

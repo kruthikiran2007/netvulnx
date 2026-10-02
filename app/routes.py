@@ -13,7 +13,7 @@ import json
 from datetime import datetime, timezone
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, current_app, jsonify, abort)
+                   flash, current_app, jsonify, abort, session)
 
 from sqlalchemy import func
 
@@ -459,14 +459,38 @@ def login():
 def login_submit():
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "")
+    ip = request.remote_addr
+
+    # Brute-force protection (Milestone 13): too many failures from this
+    # username+IP locks the combination out for 15 minutes.
+    locked, remaining = auth_lib.throttle_status(username, ip)
+    if locked:
+        mins = max(1, int(remaining.total_seconds() // 60))
+        auth_lib.log_audit("login.locked", f"username '{username}'",
+                           actor=username or "anonymous")
+        flash(f"Too many failed attempts — try again in about {mins} "
+              f"minute(s).", "error")
+        return render_template("login.html",
+                               next=request.form.get("next", "")), 429
+
     user = User.query.filter_by(username=username).first()
     if not auth_lib.verify_password(user, password):
         # Same message either way: don't reveal whether the username exists.
+        just_locked = auth_lib.record_failed_login(username, ip)
         auth_lib.log_audit("login.failed", f"username '{username}'",
                            actor=username or "anonymous")
-        flash("Wrong username or password.", "error")
+        if just_locked:
+            flash("Too many failed attempts — this login is locked for "
+                  "15 minutes.", "error")
+        else:
+            flash("Wrong username or password.", "error")
         return render_template("login.html",
                                next=request.form.get("next", "")), 401
+
+    auth_lib.clear_throttle(username, ip)
+    # Session fixation defense: drop any pre-login session data before
+    # marking this session as the user's.
+    session.clear()
     auth_lib.login_user(user)
     auth_lib.log_audit("login.ok", "", actor=user.username)
     flash(f"Welcome back, {user.username}.", "info")
@@ -484,6 +508,39 @@ def logout():
         auth_lib.log_audit("logout", "", actor=user.username)
     flash("Logged out.", "info")
     return redirect(url_for("main.login"))
+
+
+@bp.get("/account/password")
+def password_form():
+    """Change your own password (Milestone 13)."""
+    user = auth_lib.current_user()
+    if not user:
+        return redirect(url_for("main.login"))
+    return render_template("password.html")
+
+
+@bp.post("/account/password")
+def password_submit():
+    user = auth_lib.current_user()
+    if not user:
+        return redirect(url_for("main.login"))
+    current = request.form.get("current_password", "")
+    new = request.form.get("new_password", "")
+    if not auth_lib.verify_password(user, current):
+        flash("Your current password is wrong — nothing changed.", "error")
+        return render_template("password.html"), 401
+    if not auth_lib.valid_password(new):
+        flash("The new password must be at least 8 characters.", "error")
+        return render_template("password.html"), 400
+    if auth_lib.verify_password(user, new):
+        flash("The new password can't be the same as the current one.",
+              "error")
+        return render_template("password.html"), 400
+    user.password_hash = auth_lib.hash_password(new)
+    db.session.commit()
+    auth_lib.log_audit("password.changed", "", actor=user.username)
+    flash("Password changed.", "info")
+    return redirect(url_for("main.dashboard"))
 
 
 @bp.get("/audit")

@@ -20,6 +20,15 @@ class Config:
     # In a real deployment, set the NETVULNX_SECRET_KEY environment variable.
     SECRET_KEY = os.environ.get("NETVULNX_SECRET_KEY", "dev-only-change-me")
 
+    # --- Cookie hardening (Milestone 13) ---
+    # HttpOnly and SameSite=Lax are always on. The Secure flag (cookies only
+    # sent over HTTPS) is off by default because the app runs on plain HTTP
+    # on localhost; turn it on when you deploy behind HTTPS:
+    #   NETVULNX_COOKIE_SECURE=1
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = os.environ.get("NETVULNX_COOKIE_SECURE") == "1"
+
     # --- Safety controls ---
     # By default only these targets may be scanned:
     #   127.0.0.1 / ::1            -> this machine

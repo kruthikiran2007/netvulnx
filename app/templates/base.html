@@ -21,6 +21,7 @@
       <a href="{{ url_for('main.audit_log') }}">Audit</a>
       {% endif %}
       <span class="muted">{{ current_user.username }}</span>
+      <a href="{{ url_for('main.password_form') }}">Password</a>
       <form method="post" action="{{ url_for('main.logout') }}" style="display:inline">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
         <button type="submit" class="btn linklike">Log out</button>
