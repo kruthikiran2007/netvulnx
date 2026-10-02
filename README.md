@@ -1,6 +1,6 @@
 # NetVulnX — Network Vulnerability Scanner & Risk Assessment Platform
 
-![tests](https://img.shields.io/badge/tests-227%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-229%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![docker](https://img.shields.io/badge/docker-ready-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
@@ -80,7 +80,7 @@ From a real scan of a lab target (11 findings, risk score 13):
    finding severities, not a black box.
 4. **Safety is a feature.** Target scope validation, an explicit
    authorization gate before any packet is sent, no brute force, no
-   exploitation, no DoS — enforced in code and tested (227 unit tests).
+   exploitation, no DoS — enforced in code and tested (229 unit tests).
 
 ## Safety first
 
@@ -133,7 +133,7 @@ netvulnx/
 ├── rules/                 # deterministic rule engine (TLS/HTTP/service/
 │                          #   CVE/SSH rules + risk scoring)
 ├── migrations/            # Alembic versioned schema migrations
-├── tests/                 # 227 pytest unit tests
+├── tests/                 # 229 pytest unit tests
 └── docs/                  # architecture, testing, security, deployment…
 ```
 
