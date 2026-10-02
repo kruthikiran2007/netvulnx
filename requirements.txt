@@ -2,4 +2,5 @@ Flask==3.1.0
 Flask-SQLAlchemy==3.1.1
 waitress==3.0.2
 APScheduler==3.10.4
+alembic==1.14.0
 pytest==8.3.4

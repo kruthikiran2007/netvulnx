@@ -111,11 +111,15 @@ def create_app(config_class=None):
         except (TypeError, ValueError):
             return None
 
-    # Create database tables on first run. (Later milestones will switch to
-    # proper database migrations; create_all is fine while the schema is young.)
+    # Create database tables on first run.
     with app.app_context():
         db.create_all()
         _ensure_columns(app)
+
+    # Alembic migrations (Milestone 12): stamp pre-Alembic databases at
+    # head, upgrade the rest. See app/migrations.py for the full story.
+    from app import migrations as _migrations
+    _migrations.run_migrations(app)
 
     # Crash recovery: scans left "running" by a previous process must not
     # stay stuck forever — mark them interrupted, honestly.
@@ -126,10 +130,15 @@ def create_app(config_class=None):
 
 
 def _ensure_columns(app):
-    """Add columns that create_all() can't: it creates missing TABLES but
-    never alters existing ones, so a dev database from an earlier milestone
-    would otherwise be missing new columns (and crash). Each entry is
-    (table, column, sqlite_type). Runs on every startup; cheap and idempotent.
+    """Legacy schema sync for pre-Alembic databases.
+
+    create_all() creates missing TABLES but never alters existing ones, so
+    a database from an earlier milestone would otherwise be missing new
+    columns (and crash). Each entry is (table, column, sqlite_type). Runs
+    on every startup; cheap and idempotent.
+
+    New schema changes go through Alembic migrations (app/migrations.py);
+    this stays as a safety net for databases created before Milestone 12.
     """
     new_columns = [
         ("scans", "risk_score", "INTEGER NOT NULL DEFAULT 0"),

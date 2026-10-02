@@ -17,12 +17,19 @@ present. Ordered roughly by value-to-effort for a student project.
   leave localhost safely.~~ Done in Milestone 8: first-run admin setup,
   salted password hashing, login gate, audit log (see AUTHENTICATION.md).
   Remaining: password reset, brute-force throttling, richer roles.
-- [ ] **Scheduled / recurring scans.** Cron-like scheduling with drift
-  alerts ("new finding since last Tuesday").
-- [ ] **Export formats.** CSV/JSON export of findings for ticketing tools;
-  machine-readable report alongside the printable HTML.
-- [ ] **Database migrations.** Replace `_ensure_columns()` with Alembic so
-  schema changes are versioned and reversible.
+- [x] **Scheduled / recurring scans.** ~~Cron-like scheduling with drift
+  alerts ("new finding since last Tuesday").~~ Done in Milestone 10:
+  APScheduler ticker runs due schedules (daily/weekly); creation requires
+  the recurring-authorization checkbox (audit-logged); drift banner on the
+  scan detail page shows new/resolved findings vs the previous run.
+- [x] **Export formats.** ~~CSV/JSON export of findings for ticketing tools;
+  machine-readable report alongside the printable HTML.~~ Done in
+  Milestone 11: per-scan CSV and JSON downloads, login-gated.
+- [x] **Database migrations.** ~~Replace `_ensure_columns()` with Alembic so
+  schema changes are versioned and reversible.~~ Done in Milestone 12:
+  Alembic with an initial schema migration; pre-Alembic databases are
+  stamped at head (never replayed, never lose data); `_ensure_columns`
+  retained as a legacy safety net.
 
 ## High value, higher effort
 

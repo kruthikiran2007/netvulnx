@@ -4,6 +4,13 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
+> **Milestone 12 status:** complete. Phase 2 is done: **scheduled scans**
+> (Milestone 10 — recurring daily/weekly scans with drift alerts),
+> **CSV/JSON exports** (Milestone 11), and **Alembic migrations**
+> (Milestone 12 — versioned, reversible schema changes; pre-Alembic
+> databases are stamped, never replayed). All quality gates pass —
+> **130 unit tests**.
+
 > **Milestone 9 status:** complete. CVE mapping is in: when the scanner
 > identifies a product *and* version (e.g. `Apache 2.4.1`), NetVulnX looks
 > up real CVEs from the NVD, caches them (7-day TTL), and adds one finding
