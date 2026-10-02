@@ -269,3 +269,18 @@ class AuditEvent(db.Model):
     action = db.Column(db.String(60), nullable=False)
     detail = db.Column(db.Text)
     ip_address = db.Column(db.String(45))
+
+
+class CveCache(db.Model):
+    """Cached NVD results per CPE (Milestone 9).
+
+    One row per CPE string: the raw CVE list as JSON plus when it was
+    fetched. 7-day TTL (see scanner/cve.py). Lets repeat scans work
+    without hammering the public NVD API — and keeps working offline
+    until the cache expires.
+    """
+    __tablename__ = "cve_cache"
+
+    cpe = db.Column(db.String(200), primary_key=True)
+    payload = db.Column(db.Text, nullable=False)  # JSON list of CVE dicts
+    fetched_at = db.Column(db.DateTime, nullable=False, default=_utcnow)

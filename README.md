@@ -4,6 +4,15 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
+> **Milestone 9 status:** complete. CVE mapping is in: when the scanner
+> identifies a product *and* version (e.g. `Apache 2.4.1`), NetVulnX looks
+> up real CVEs from the NVD, caches them (7-day TTL), and adds one finding
+> per CVE — severity from the CVSS score, confidence "likely" (banner→CPE
+> matching is heuristic), capped at 10 per service. No network → no CVE
+> findings, never fake ones. All quality gates pass — **113 unit tests**,
+> plus a live end-to-end scan against a fake Apache/2.4.1 that produced 10
+> real CVE findings. See `docs/CVE_MAPPING.md`.
+
 > **Milestone 8 status:** complete. Authentication is in: first-run admin
 > setup, login/logout with salted password hashing (Werkzeug scrypt), a
 > login gate on every page, and an append-only audit log (logins, scans,

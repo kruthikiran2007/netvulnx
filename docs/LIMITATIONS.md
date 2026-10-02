@@ -21,8 +21,9 @@ its blind spots. This is the complete, honest list.
    a small redirect chain) — it doesn't spider the site or test inputs.
 6. **Version-based findings are "Potential".** When a banner claims
    `Server: X 1.2.3`, rules flag *known-bad patterns* (e.g. `Server`
-   disclosing versions), but NetVulnX does not map versions to CVEs.
-   A version string is evidence of disclosure, not proof of exploitability.
+   disclosing versions). Milestone 9 adds CVE mapping for products with
+   known CPEs (see CVE_MAPPING.md) — but a CVE *affecting* a version is
+   still not proof of exploitability on that host.
 
 ## Detection philosophy
 
@@ -30,8 +31,12 @@ its blind spots. This is the complete, honest list.
    finding from "port X is open" alone — a finding needs a measured,
    explainable misconfiguration (weak TLS, missing security header, cleartext
    service, etc.).
-8. **No CVE database.** Findings reference standards and vendor docs
-   (OWASP, Mozilla SSL guidance, RFCs), not CVE IDs.
+8. **CVE findings are heuristic, not proof.** Since Milestone 9, findings
+   can reference real CVE IDs (NVD-sourced, CVSS-scored) — but only at
+   "likely" confidence, because banner→CPE matching is approximate and a
+   CVE affecting a version doesn't prove this host is exploitable.
+   Findings that aren't CVE-backed still reference standards and vendor
+   docs (OWASP, Mozilla SSL guidance, RFCs).
 9. **Deterministic, not AI.** There is no machine-learning detection and
    no LLM in the pipeline. Explanations in the UI are fixed templates
    written by the rule authors — consistent, auditable, and never

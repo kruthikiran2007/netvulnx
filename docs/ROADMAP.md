@@ -5,10 +5,14 @@ present. Ordered roughly by value-to-effort for a student project.
 
 ## High value, moderate effort
 
-- [ ] **CVE mapping.** Match detected software/version strings against a
+- [x] **CVE mapping.** ~~Match detected software/version strings against a
   local CVE feed (e.g. NVD JSON) to turn "Potential" version findings into
-  referenced, scored ones. Needs a safe offline feed + careful matching to
-  avoid the false positives this project works hard to prevent.
+  referenced, scored ones.~~ Done in Milestone 9: banner product/version →
+  CPE → live NVD lookup (cached 7 days, `cve_cache` table), one finding per
+  CVE with CVSS-based severity and "likely" confidence, capped at 10 per
+  service. Honest about heuristic matching and "affected ≠ exploitable"
+  (see CVE_MAPPING.md). Remaining: larger result windows for CVE-heavy
+  products, optional NVD API key support.
 - [x] **Authentication.** ~~Login (even simple local accounts) so the app can
   leave localhost safely.~~ Done in Milestone 8: first-run admin setup,
   salted password hashing, login gate, audit log (see AUTHENTICATION.md).

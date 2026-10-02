@@ -251,13 +251,19 @@ def test_open_port_alone_produces_no_findings():
     assert rules.evaluate(ctx) == []
 
 
-def test_rules_against_real_model_attributes():
+def test_rules_against_real_model_attributes(monkeypatch):
     """Regression test: run the rules against REAL (unpersisted) SQLAlchemy
     model instances, not test doubles. evaluate() swallows per-rule
     exceptions, so a rule touching a renamed/missing column would silently
     never fire — this test catches that by demanding every applicable rule
     matches an all-positive fixture."""
-    from app.models import TlsInfo, HttpInfo, ServiceCheck
+    from app.models import TlsInfo, HttpInfo, ServiceCheck, Port
+
+    # The CVE rule looks up the NVD over the network — stub it so this
+    # stays a fast, offline unit test.
+    monkeypatch.setattr("scanner.cve.lookup_cves",
+                        lambda product, version, _fetch=None:
+                        [{"id": "CVE-TEST-1", "cvss": 9.8}])
 
     tls = TlsInfo(
         cert_expired=True, cert_subject="CN=x",
@@ -270,6 +276,7 @@ def test_rules_against_real_model_attributes():
         missing_security_headers='["HSTS", "CSP", "X-Frame-Options"]',
         redirects_to_https=False, directory_listing=True,
         default_page="nginx default page", page_title="Index of /")
+    port = Port(port=80, service="http", product="Apache", version="2.4.49")
     checks = {
         "ftp_anonymous": ServiceCheck(
             check_type="ftp_anonymous", summary="ANONYMOUS LOGIN ALLOWED",
@@ -283,7 +290,8 @@ def test_rules_against_real_model_attributes():
             details=json.dumps({"starttls_advertised": False,
                                 "banner": "220 x", "extensions": []})),
     }
-    ctx = {"tls": tls, "http": http, "checks": checks, "target": "127.0.0.1"}
+    ctx = {"tls": tls, "http": http, "checks": checks, "target": "127.0.0.1",
+           "port": port}
     matched = {r["id"] for r, _ in rules.evaluate(ctx)}
     # http-no-https-redirect is https-only by design; everything else fires.
     expected = {r["id"] for r in rules.ALL_RULES} - {"http-no-https-redirect"}
