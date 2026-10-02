@@ -354,3 +354,24 @@ class LoginThrottle(db.Model):
     @staticmethod
     def make_key(username, ip):
         return f"{(username or '').lower()}|{ip or ''}"
+
+
+class ApiToken(db.Model):
+    """API token for automation (Milestone 14).
+
+    The plaintext secret is shown ONCE at creation and never stored —
+    only its SHA-256 hash. A token authenticates /api/* requests via
+    ``Authorization: Bearer <secret>``. Revoking is instant.
+    """
+    __tablename__ = "api_tokens"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    prefix = db.Column(db.String(16), nullable=False)  # first chars, for ID
+    token_hash = db.Column(db.String(64), nullable=False, unique=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+    last_used_at = db.Column(db.DateTime, nullable=True)
+    revoked = db.Column(db.Boolean, nullable=False, default=False)
+
+    user = db.relationship("User", backref="api_tokens")

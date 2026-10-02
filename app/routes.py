@@ -20,7 +20,8 @@ from sqlalchemy import func
 from app import db
 from app import auth as auth_lib
 from app.models import (Scan, Asset, Port, Finding, FINDING_STATUSES,
-                        CLOSED_STATUSES, User, AuditEvent, ScheduledScan)
+                        CLOSED_STATUSES, User, AuditEvent, ScheduledScan,
+                        ApiToken)
 from app.drift import drift_for_scan
 from app.stats import (severity_counts, worst_severity, service_exposure,
                        inventory_rows, risk_history, recent_findings)
@@ -695,3 +696,55 @@ def export_json(scan_id):
         mimetype="application/json",
         headers={"Content-Disposition":
                  f"attachment; filename={_export_filename(scan, 'json')}"})
+
+
+# ---------------- Milestone 14: API tokens ----------------
+
+def _require_admin():
+    user = auth_lib.current_user()
+    if not user or not user.is_admin:
+        abort(403, description="Admins only.")
+
+
+@bp.get("/settings/tokens")
+def token_list():
+    """API tokens for automation. Admins only."""
+    _require_admin()
+    tokens = ApiToken.query.order_by(ApiToken.created_at.desc()).all()
+    return render_template("tokens.html", tokens=tokens,
+                           new_secret=request.args.get("new_secret"),
+                           new_name=request.args.get("new_name"))
+
+
+@bp.post("/settings/tokens/new")
+def token_create():
+    """Create a token. The secret is shown ONCE — never stored in plain."""
+    import secrets as _secrets
+    _require_admin()
+    user = auth_lib.current_user()
+    name = request.form.get("name", "").strip() or "Untitled token"
+    secret = auth_lib.TOKEN_PREFIX + _secrets.token_hex(16)
+    token = ApiToken(name=name[:120],
+                     prefix=secret[:len(auth_lib.TOKEN_PREFIX) + 8],
+                     token_hash=auth_lib.hash_token(secret),
+                     user_id=user.id)
+    db.session.add(token)
+    db.session.commit()
+    auth_lib.log_audit("token.created",
+                       f"token '{name}' (…{token.prefix[-4:]}) for "
+                       f"{user.username}")
+    flash("Token created — copy it now. It will never be shown again.",
+          "info")
+    return redirect(url_for("main.token_list", new_secret=secret,
+                            new_name=name))
+
+
+@bp.post("/settings/tokens/<int:token_id>/revoke")
+def token_revoke(token_id):
+    _require_admin()
+    token = ApiToken.query.get_or_404(token_id)
+    token.revoked = True
+    db.session.commit()
+    auth_lib.log_audit("token.revoked", f"token '{token.name}'")
+    flash(f"Token '{token.name}' revoked.", "info")
+    return redirect(url_for("main.token_list"))

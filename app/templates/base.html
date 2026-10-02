@@ -19,6 +19,7 @@
       <a href="{{ url_for('main.new_scan_form') }}" class="btn">+ New scan</a>
       {% if current_user.is_admin %}
       <a href="{{ url_for('main.audit_log') }}">Audit</a>
+      <a href="{{ url_for('main.token_list') }}">API tokens</a>
       {% endif %}
       <span class="muted">{{ current_user.username }}</span>
       <a href="{{ url_for('main.password_form') }}">Password</a>

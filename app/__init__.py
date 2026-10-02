@@ -44,8 +44,13 @@ def create_app(config_class=None):
     @app.before_request
     def _check_csrf():
         # Every POST must carry this session's CSRF token.
+        # API requests with a valid Bearer token (Milestone 14) are exempt:
+        # they authenticate per-request and never use the session cookie.
         from flask import request as _request
+        from app import auth as _auth
         if _request.method == "POST":
+            if _auth.request_has_valid_bearer():
+                return None
             _csrf.validate_csrf()
 
     @app.before_request
@@ -64,6 +69,10 @@ def create_app(config_class=None):
             return None
         if _User.query.count() == 0:
             return _redirect(_url_for("main.setup"))
+        # API tokens (Milestone 14): a valid Bearer header authenticates
+        # /api/* callers without a browser session.
+        if _auth.request_has_valid_bearer():
+            return None
         if not _auth.current_user():
             nxt = path if path.startswith("/") and not path.startswith("//") \
                 else "/"

@@ -43,7 +43,16 @@ def verify_password(user, password):
 
 
 def current_user():
-    """The logged-in User, or None. Looks up the session's id each time."""
+    """The logged-in User, or None. Looks up the session's id each time.
+
+    API requests authenticated with a Bearer token (Milestone 14) resolve
+    to the token's owner instead — so the audit log attributes API actions
+    to the right human.
+    """
+    from flask import g
+    api_user = getattr(g, "api_user", None)
+    if api_user is not None:
+        return api_user
     user_id = session.get(SESSION_KEY)
     if not user_id:
         return None
@@ -135,3 +144,51 @@ def clear_throttle(username, ip):
     if row:
         db.session.delete(row)
         db.session.commit()
+
+
+def hash_token(secret):
+    """SHA-256 of the token secret — what's stored in the database."""
+    import hashlib
+    return hashlib.sha256(secret.encode()).hexdigest()
+
+
+#: API tokens (Milestone 14) look like: nvx_<32 hex chars>.
+TOKEN_PREFIX = "nvx_"
+
+
+def user_from_bearer_token():
+    """The User behind a valid ``Authorization: Bearer`` token, or None.
+
+    Only non-revoked tokens count. Updates last_used_at (best-effort).
+    """
+    authz = request.headers.get("Authorization", "")
+    if not authz.startswith("Bearer "):
+        return None
+    secret = authz[len("Bearer "):].strip()
+    if not secret.startswith(TOKEN_PREFIX):
+        return None
+    from app.models import ApiToken
+    token = (ApiToken.query
+             .filter_by(token_hash=hash_token(secret), revoked=False)
+             .first())
+    if not token:
+        return None
+    token.last_used_at = _utcnow()
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+    return token.user
+
+
+def request_has_valid_bearer():
+    """True if this request carries a valid API token (also stashes the
+    user on flask.g so the login gate and audit log see it)."""
+    from flask import g
+    if getattr(g, "api_user", None) is not None:
+        return True
+    user = user_from_bearer_token()
+    if user:
+        g.api_user = user
+        return True
+    return False

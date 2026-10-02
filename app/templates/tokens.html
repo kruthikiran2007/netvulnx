@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}API tokens · NetVulnX{% endblock %}
+{% block content %}
+<h1>API tokens</h1>
+
+<p class="muted">Tokens authenticate automation against <code>/api/*</code>
+with an <code>Authorization: Bearer &lt;token&gt;</code> header. A token acts
+with your permissions — guard it like a password.</p>
+
+{% if new_secret %}
+<div class="notice">
+  <strong>Token "{{ new_name }}" created.</strong> Copy it now — it will
+  never be shown again:
+  <p><code>{{ new_secret }}</code></p>
+</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('main.token_create') }}" class="form">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <label>
+    New token name
+    <input type="text" name="name" maxlength="120" placeholder="e.g. CI pipeline">
+  </label>
+  <button class="btn primary" type="submit">Create token</button>
+</form>
+
+{% if tokens %}
+<table class="table">
+  <thead><tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+  <tbody>
+    {% for t in tokens %}
+    <tr>
+      <td>{{ t.name }}</td>
+      <td><code>{{ t.prefix }}…</code></td>
+      <td>{{ t.created_at }}</td>
+      <td>{{ t.last_used_at or "—" }}</td>
+      <td>{% if t.revoked %}<span class="badge muted">revoked</span>{% else %}<span class="badge ok">active</span>{% endif %}</td>
+      <td>
+        {% if not t.revoked %}
+        <form method="post" action="{{ url_for('main.token_revoke', token_id=t.id) }}" style="display:inline"
+              onsubmit="return confirm('Revoke this token? Automation using it will break.');">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="btn small danger" type="submit">Revoke</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
