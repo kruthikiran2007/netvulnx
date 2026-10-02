@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Log in — NetVulnX{% endblock %}
+{% block content %}
+<h1>Log in</h1>
+<p class="muted">NetVulnX requires an account. Every action is audit-logged.</p>
+<form method="post" action="{{ url_for('main.login') }}" class="card">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <input type="hidden" name="next" value="{{ next }}">
+  <label>Username
+    <input type="text" name="username" required autocomplete="username" autofocus>
+  </label>
+  <label>Password
+    <input type="password" name="password" required autocomplete="current-password">
+  </label>
+  <button type="submit" class="btn">Log in</button>
+</form>
+{% endblock %}

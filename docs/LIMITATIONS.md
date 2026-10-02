@@ -42,10 +42,13 @@ its blind spots. This is the complete, honest list.
 
 ## Platform & deployment
 
-11. **Localhost dev server.** `run.py` uses Flask's development server with
-    `debug=True` on `127.0.0.1:5000`. It is not a production server.
-12. **No authentication or user accounts.** Anyone who can reach the UI has
-    full control. Keep it on localhost.
+11. **Localhost server.** `run.py` serves with waitress (production-grade,
+    pure Python) on `127.0.0.1:5000`; `NETVULNX_DEBUG=1` selects Flask's
+    development server instead. Still localhost-only by default.
+12. **Single-tier authentication.** Login, salted password hashing, and an
+    audit log exist (Milestone 8), but there are no roles beyond
+    admin/regular, no password reset, and no brute-force throttling.
+    Fine for a small trusted team; harden before wider exposure.
 13. **SQLite, single file.** Fine for one operator; not for concurrent
     teams. No migrations framework yet (`_ensure_columns()` only).
 14. **Charts need the CDN.** Chart.js loads from `cdn.jsdelivr.net`;

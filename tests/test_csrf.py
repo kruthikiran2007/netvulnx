@@ -22,6 +22,13 @@ def client():
     app = create_app(_TestConfig)
     app.config.update(TESTING=True)
     with app.test_client() as c:
+        # Milestone 8: all pages sit behind the login gate, so create the
+        # first admin through the real /setup flow before testing.
+        html = c.get("/setup").get_data(as_text=True)
+        tok = re.search(r'name="_csrf_token" value="([^"]+)"', html).group(1)
+        r = c.post("/setup", data={"_csrf_token": tok, "username": "admin",
+                                   "password": "testpass123"})
+        assert r.status_code == 302
         yield c
 
 
@@ -64,8 +71,10 @@ def test_post_with_valid_token_works(client):
 def test_token_is_per_session(client):
     t1 = _token_from(client)
     with client.session_transaction() as sess:
-        sess.clear()  # drop the session -> new visitor
-    t2 = _token_from(client)
+        sess.clear()  # drop the session -> new visitor (logged out)
+    # Anonymous visitors can't reach /scans/new (login gate), so take the
+    # token from the login form instead — still a per-session token.
+    t2 = _token_from(client, url="/login")
     assert t1 != t2
 
 

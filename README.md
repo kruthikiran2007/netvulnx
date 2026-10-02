@@ -4,14 +4,13 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
-> **Milestone 7 status:** complete. Hardening is in: per-session **CSRF
-> tokens** on every POST form, security headers (CSP, nosniff, DENY framing,
-> same-origin referrer), `HttpOnly` + `SameSite=Lax` session cookies, and a
-> loud startup warning when the development secret key is in use. The full
-> documentation set now ships: API, TESTING, SECURITY, THREAT_MODEL,
-> LIMITATIONS, ROADMAP, LAB_SETUP, DEVELOPMENT, and PROJECT_REPORT. All
-> quality gates pass — **89 unit tests + 27 end-to-end checks** (real scans
-> against loopback fake services).
+> **Milestone 8 status:** complete. Authentication is in: first-run admin
+> setup, login/logout with salted password hashing (Werkzeug scrypt), a
+> login gate on every page, and an append-only audit log (logins, scans,
+> triage) with an admin viewer. The dev server is replaced by **waitress**
+> (production-grade, Windows-friendly); `NETVULNX_DEBUG=1` still gives the
+> Flask dev server. All quality gates pass — **100 unit tests + 11
+> end-to-end checks** (real login flow + scan against a live server).
 
 ## Safety first
 
@@ -87,3 +86,4 @@ netvulnx/
 5. **Dashboard, assets, attack-surface view** ✅ — real-data aggregates, risk chart, latest findings; global asset inventory with per-IP timelines; attack-surface view (service exposure + latest-scan port map); all charts mirror tables
 6. **Reports, remediation tracking, scan comparison** ✅ — printable HTML report per scan (browser Print → PDF); finding triage (open/acknowledged/resolved/false positive) with notes + remediation progress; scan diff (new/gone findings, opened/closed ports, risk delta)
 7. **Testing, hardening, documentation** ✅ — 89 unit tests + 27 end-to-end checks; CSRF protection, security headers, hardened session cookies, secret-key hygiene; full doc set (API, TESTING, SECURITY, THREAT_MODEL, LIMITATIONS, ROADMAP, LAB_SETUP, DEVELOPMENT, PROJECT_REPORT)
+8. **Authentication + production server** ✅ — first-run admin setup, login/logout with salted password hashing, login gate on all routes, append-only audit log with admin viewer; waitress production server (`NETVULNX_DEBUG=1` for Flask dev server); 100 unit tests + 11 end-to-end checks

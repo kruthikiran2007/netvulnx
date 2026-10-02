@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Audit log — NetVulnX{% endblock %}
+{% block content %}
+<h1>Audit log</h1>
+<p class="muted">Append-only record of security-relevant actions. The app never
+edits or deletes these rows.</p>
+<table class="scan_table">
+  <thead>
+    <tr><th>When (UTC)</th><th>Actor</th><th>Action</th><th>Detail</th><th>IP</th></tr>
+  </thead>
+  <tbody>
+    {% for e in events %}
+    <tr>
+      <td>{{ e.created_at.strftime('%Y-%m-%d %H:%M:%S') if e.created_at }}</td>
+      <td>{{ e.actor }}</td>
+      <td><code>{{ e.action }}</code></td>
+      <td>{{ e.detail or '—' }}</td>
+      <td>{{ e.ip_address or '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5" class="muted">No audit events yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

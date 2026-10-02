@@ -43,10 +43,11 @@ employer), get written authorization first and only then consider flipping
 
 ## 3. Known gaps (honest, not hidden)
 
-1. **No login system.** Anyone who can reach the web UI can create scans and
-   see results. This is acceptable for a localhost dev tool and a lab demo,
-   but **do not expose the app to an untrusted network** without adding
-   authentication (see ROADMAP.md).
+1. **Authentication is single-tier.** Milestone 8 added login (salted
+   password hashing, login gate, audit log — see AUTHENTICATION.md), but
+   there are no roles beyond admin/regular, no password reset, and no
+   brute-force throttling on `/login`. Fine for a small trusted team;
+   harden before wider exposure.
 2. **CSRF on a shared machine** is only as strong as the browser session —
    the dev fallback secret key (below) is the weaker link.
 3. **Development secret key.** `config.py` falls back to
@@ -54,11 +55,12 @@ employer), get written authorization first and only then consider flipping
    loud warning at startup in this case. Set the environment variable for
    any shared deployment: anyone who knows the key can forge session
    cookies.
-4. **`debug=True`** in `run.py` — convenient locally, must be off if the
-   app is ever served beyond localhost.
-5. **No rate limiting** on scan creation — a local user could queue many
-   scans; the bounded worker pool keeps this from becoming dangerous, but
-   it is a UI-level gap.
+4. **Dev server opt-in.** `run.py` now serves with waitress by default;
+   `NETVULNX_DEBUG=1` selects the Flask dev server (with debugger) for
+   local development only.
+5. **No rate limiting** on scan creation or login attempts — a local user
+   could queue many scans; the bounded worker pool keeps this from becoming
+   dangerous, but it is a UI-level gap.
 6. **No database migrations** yet — schema changes use a small
    `_ensure_columns()` helper. Fine for SQLite dev, not for production.
 7. Chart.js loads from a CDN — charts degrade gracefully to tables

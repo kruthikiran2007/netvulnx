@@ -236,3 +236,36 @@ class Finding(db.Model):
 FINDING_STATUSES = ("open", "acknowledged", "resolved", "false_positive")
 #: Statuses that count as "done" for remediation progress.
 CLOSED_STATUSES = ("resolved", "false_positive")
+
+
+class User(db.Model):
+    """A login account (Milestone 8).
+
+    Passwords are NEVER stored — only a salted hash (see app/auth.py).
+    The very first account created becomes the admin; later accounts
+    (added by an admin) are regular users.
+    """
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    is_admin = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+
+class AuditEvent(db.Model):
+    """Append-only record of security-relevant actions (Milestone 8).
+
+    Who did what, when, from where: logins, account creation, scans
+    created/authorized/cancelled, findings triaged. Never edited or
+    deleted by the app — it's the tamper-evident trail an auditor asks for.
+    """
+    __tablename__ = "audit_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+    actor = db.Column(db.String(80), nullable=False, default="anonymous")
+    action = db.Column(db.String(60), nullable=False)
+    detail = db.Column(db.Text)
+    ip_address = db.Column(db.String(45))

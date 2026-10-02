@@ -17,8 +17,9 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from sqlalchemy import func
 
 from app import db
+from app import auth as auth_lib
 from app.models import (Scan, Asset, Port, Finding, FINDING_STATUSES,
-                        CLOSED_STATUSES)
+                        CLOSED_STATUSES, User, AuditEvent)
 from app.stats import (severity_counts, worst_severity, service_exposure,
                        inventory_rows, risk_history, recent_findings)
 from app.diff import compare_findings, compare_ports, summarize
@@ -207,6 +208,9 @@ def new_scan_submit():
                 status="awaiting_authorization")
     db.session.add(scan)
     db.session.commit()
+    auth_lib.log_audit("scan.created",
+                       f"scan #{scan.id} '{scan.name}' -> {scan.target_raw} "
+                       f"[{scan.profile}]")
     # Step 2 (next page): the authorization gate.
     return redirect(url_for("main.authorize_scan", scan_id=scan.id))
 
@@ -245,6 +249,8 @@ def authorize_scan_submit(scan_id):
         # User declined (or bypassed the checkbox): cancel cleanly.
         scan.status = "cancelled"
         db.session.commit()
+        auth_lib.log_audit("scan.cancelled",
+                           f"scan #{scan.id} '{scan.name}' declined at gate")
         flash("Scan cancelled — nothing was sent to the target.", "info")
         return redirect(url_for("main.scan_list"))
 
@@ -254,6 +260,8 @@ def authorize_scan_submit(scan_id):
     scan.started_at = scan.authorized_at
     scan.current_stage = "Starting…"
     db.session.commit()
+    auth_lib.log_audit("scan.authorized",
+                       f"scan #{scan.id} '{scan.name}' -> {scan.target_raw}")
 
     jobs.start_scan_job(current_app._get_current_object(), scan.id)
     flash("Scan started in the background — progress is live below.", "info")
@@ -265,6 +273,8 @@ def cancel_scan(scan_id):
     """Ask a running scan to stop. The worker checks between phases/chunks."""
     scan = Scan.query.get_or_404(scan_id)
     if scan.status == "running" and jobs.cancel_scan_job(scan.id):
+        auth_lib.log_audit("scan.cancelled",
+                           f"scan #{scan.id} '{scan.name}' stop requested")
         flash("Cancellation requested — the scan will stop shortly.", "info")
     else:
         flash("That scan is not running.", "error")
@@ -321,6 +331,8 @@ def finding_status(finding_id):
     finding.status_note = request.form.get("note", "").strip() or None
     finding.status_updated_at = datetime.now(timezone.utc)
     db.session.commit()
+    auth_lib.log_audit("finding.triaged",
+                       f"finding #{finding.id} '{finding.title}' -> {new_status}")
     flash(f"Finding marked as {new_status.replace('_', ' ')}.", "info")
     return _safe_back(fallback)
 
@@ -388,3 +400,93 @@ def scan_compare():
             }
     return render_template("compare.html", completed=completed,
                            a_id=a_id, b_id=b_id, result=result)
+
+
+# ---------------------------------------------------------------------------
+# Authentication (Milestone 8). The login gate itself lives in
+# app/__init__.py (_require_login); these are the pages it lets through.
+# ---------------------------------------------------------------------------
+
+@bp.get("/setup")
+def setup():
+    """First-run page: create the initial admin account.
+
+    Only reachable while no users exist at all — afterwards it redirects
+    to the login page, so nobody can re-run setup to hijack the app.
+    """
+    if User.query.count() > 0:
+        return redirect(url_for("main.login"))
+    return render_template("setup.html")
+
+
+@bp.post("/setup")
+def setup_submit():
+    if User.query.count() > 0:
+        abort(403, description="Setup already completed.")
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    if not auth_lib.valid_username(username):
+        flash("Username: 3-40 characters, letters/digits/_/-.", "error")
+        return render_template("setup.html"), 400
+    if not auth_lib.valid_password(password):
+        flash("Password must be at least 8 characters.", "error")
+        return render_template("setup.html"), 400
+    user = User(username=username,
+                password_hash=auth_lib.hash_password(password),
+                is_admin=True)
+    db.session.add(user)
+    db.session.commit()
+    auth_lib.login_user(user)
+    auth_lib.log_audit("user.created",
+                       f"initial admin account '{username}'", actor=username)
+    flash(f"Welcome, {username} — admin account created.", "info")
+    return redirect(url_for("main.dashboard"))
+
+
+@bp.get("/login")
+def login():
+    if auth_lib.current_user():
+        return redirect(url_for("main.dashboard"))
+    return render_template("login.html", next=request.args.get("next", ""))
+
+
+@bp.post("/login")
+def login_submit():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    user = User.query.filter_by(username=username).first()
+    if not auth_lib.verify_password(user, password):
+        # Same message either way: don't reveal whether the username exists.
+        auth_lib.log_audit("login.failed", f"username '{username}'",
+                           actor=username or "anonymous")
+        flash("Wrong username or password.", "error")
+        return render_template("login.html",
+                               next=request.form.get("next", "")), 401
+    auth_lib.login_user(user)
+    auth_lib.log_audit("login.ok", "", actor=user.username)
+    flash(f"Welcome back, {user.username}.", "info")
+    nxt = request.form.get("next", "")
+    if nxt.startswith("/") and not nxt.startswith("//"):
+        return redirect(nxt)
+    return redirect(url_for("main.dashboard"))
+
+
+@bp.post("/logout")
+def logout():
+    user = auth_lib.current_user()
+    auth_lib.logout_user()
+    if user:
+        auth_lib.log_audit("logout", "", actor=user.username)
+    flash("Logged out.", "info")
+    return redirect(url_for("main.login"))
+
+
+@bp.get("/audit")
+def audit_log():
+    """Recent audit events. Admins only — it's the tamper-evident trail."""
+    user = auth_lib.current_user()
+    if not user or not user.is_admin:
+        abort(403, description="Admins only.")
+    events = (AuditEvent.query
+              .order_by(AuditEvent.created_at.desc()).limit(200).all())
+    return render_template("audit.html", events=events)

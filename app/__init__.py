@@ -34,12 +34,41 @@ def create_app(config_class=None):
         # Makes {{ csrf_token() }} available in every template.
         return {"csrf_token": _csrf.get_token}
 
+    @app.context_processor
+    def _inject_user():
+        # Makes {{ current_user }} available in every template (None when
+        # logged out) so the nav can show login/logout state.
+        from app import auth as _auth
+        return {"current_user": _auth.current_user()}
+
     @app.before_request
     def _check_csrf():
         # Every POST must carry this session's CSRF token.
         from flask import request as _request
         if _request.method == "POST":
             _csrf.validate_csrf()
+
+    @app.before_request
+    def _require_login():
+        """Login gate (Milestone 8): every page needs an authenticated user.
+
+        /login, /setup and static files are exempt. With no accounts yet,
+        everything redirects to /setup so the first admin can be created.
+        """
+        from flask import request as _request, redirect as _redirect, \
+            url_for as _url_for
+        from app import auth as _auth
+        from app.models import User as _User
+        path = _request.path
+        if path.startswith("/static/") or path in ("/login", "/setup"):
+            return None
+        if _User.query.count() == 0:
+            return _redirect(_url_for("main.setup"))
+        if not _auth.current_user():
+            nxt = path if path.startswith("/") and not path.startswith("//") \
+                else "/"
+            return _redirect(_url_for("main.login", next=nxt))
+        return None
 
     @app.after_request
     def _security_headers(response):

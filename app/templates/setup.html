@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}First-run setup — NetVulnX{% endblock %}
+{% block content %}
+<h1>First-run setup</h1>
+<p class="muted">No accounts exist yet. Create the <strong>admin</strong> account —
+this page disappears forever once it's done.</p>
+<form method="post" action="{{ url_for('main.setup') }}" class="card">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <label>Username <span class="muted">(3–40 chars, letters/digits/_/-)</span>
+    <input type="text" name="username" required autocomplete="username" autofocus>
+  </label>
+  <label>Password <span class="muted">(at least 8 characters)</span>
+    <input type="password" name="password" required autocomplete="new-password">
+  </label>
+  <button type="submit" class="btn">Create admin account</button>
+</form>
+{% endblock %}

@@ -9,8 +9,10 @@ present. Ordered roughly by value-to-effort for a student project.
   local CVE feed (e.g. NVD JSON) to turn "Potential" version findings into
   referenced, scored ones. Needs a safe offline feed + careful matching to
   avoid the false positives this project works hard to prevent.
-- [ ] **Authentication.** Login (even simple local accounts) so the app can
-  leave localhost safely. Prerequisite for almost everything below.
+- [x] **Authentication.** ~~Login (even simple local accounts) so the app can
+  leave localhost safely.~~ Done in Milestone 8: first-run admin setup,
+  salted password hashing, login gate, audit log (see AUTHENTICATION.md).
+  Remaining: password reset, brute-force throttling, richer roles.
 - [ ] **Scheduled / recurring scans.** Cron-like scheduling with drift
   alerts ("new finding since last Tuesday").
 - [ ] **Export formats.** CSV/JSON export of findings for ticketing tools;
@@ -38,9 +40,12 @@ present. Ordered roughly by value-to-effort for a student project.
   critical findings.
 - [ ] **Baseline diffing in the UI.** The `/scans/compare` engine exists;
   promote it to first-class "baseline vs now" tracking per asset.
-- [ ] **Production deployment guide.** Gunicorn + reverse proxy + TLS,
+- [x] **Production deployment guide.** ~~Gunicorn + reverse proxy + TLS,
   `SESSION_COOKIE_SECURE`, pinned dependencies (`requirements.txt` with
-  hashes), container image.
+  hashes), container image.~~ Partially done in Milestone 8: waitress
+  production server by default (`NETVULNX_DEBUG=1` for the dev server),
+  pinned requirements, production checklist in AUTHENTICATION.md.
+  Remaining: reverse-proxy + TLS recipe, container image.
 - [ ] **i18n.** The UI strings are plain English in templates — extractable.
 
 ## Explicitly not on the roadmap
