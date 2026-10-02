@@ -1,0 +1,21 @@
+# NetVulnX compose stack (Milestone 17).
+#
+#   NETVULNX_SECRET_KEY="<long random value>" docker compose up -d --build
+#
+# Then open http://127.0.0.1:5000. For HTTPS, put Caddy in front —
+# see docs/DEPLOYMENT.md.
+services:
+  netvulnx:
+    build: .
+    ports:
+      # Bound to localhost only: reach it directly, or via a reverse proxy.
+      - "127.0.0.1:5000:5000"
+    environment:
+      NETVULNX_SECRET_KEY: ${NETVULNX_SECRET_KEY:?Set NETVULNX_SECRET_KEY first}
+      NETVULNX_COOKIE_SECURE: ${NETVULNX_COOKIE_SECURE:-0}
+    volumes:
+      - netvulnx-data:/data
+    restart: unless-stopped
+
+volumes:
+  netvulnx-data:

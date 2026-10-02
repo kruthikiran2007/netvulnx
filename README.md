@@ -4,6 +4,14 @@ A realistic, safe-by-design network vulnerability assessment tool for
 **authorized** environments: your own machines, lab VMs, and private networks
 you have permission to test.
 
+> **Milestone 17 status:** complete. Phase 3 is done: **login hardening**
+> (Milestone 13 — brute-force lockout, password change, secure cookies),
+> **API tokens** (Milestone 14 — Bearer auth for `/api/*`), **team roles**
+> (Milestone 15 — viewer/operator/admin RBAC + user management),
+> **webhook notifications** (Milestone 16 — drift alerts on scheduled runs),
+> and **deployment** (Milestone 17 — Dockerfile, compose, HTTPS recipe).
+> All quality gates pass — **149 unit tests**.
+
 > **Milestone 12 status:** complete. Phase 2 is done: **scheduled scans**
 > (Milestone 10 — recurring daily/weekly scans with drift alerts),
 > **CSV/JSON exports** (Milestone 11), and **Alembic migrations**

@@ -27,18 +27,18 @@ def _version(app):
 
 def test_fresh_database_stamped_at_head():
     app, _ = _make_app()
-    assert _version(app) == "794b6339bb50"
+    assert _version(app) == "fe152a39d862"
 
 
 def test_migrations_idempotent_on_restart():
     app, path = _make_app()
-    assert _version(app) == "794b6339bb50"
+    assert _version(app) == "fe152a39d862"
 
     class _TestConfig2(Config):
         SQLALCHEMY_DATABASE_URI = "sqlite:///" + path
 
     app2 = create_app(_TestConfig2)
-    assert _version(app2) == "794b6339bb50"
+    assert _version(app2) == "fe152a39d862"
     # Tables still all there after the second startup.
     with app2.app_context():
         tables = db.inspect(db.engine).get_table_names()
@@ -70,7 +70,7 @@ def test_pre_alembic_database_gets_stamped_not_replayed():
         SQLALCHEMY_DATABASE_URI = "sqlite:///" + tmp.name
 
     app = create_app(_TestConfig)
-    assert _version(app) == "794b6339bb50"
+    assert _version(app) == "fe152a39d862"
     with app.app_context():
         name = db.session.execute(
             db.text("SELECT name FROM scans WHERE target_raw='127.0.0.1'")

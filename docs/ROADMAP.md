@@ -16,7 +16,7 @@ present. Ordered roughly by value-to-effort for a student project.
 - [x] **Authentication.** ~~Login (even simple local accounts) so the app can
   leave localhost safely.~~ Done in Milestone 8: first-run admin setup,
   salted password hashing, login gate, audit log (see AUTHENTICATION.md).
-  Remaining: password reset, brute-force throttling, richer roles.
+  Remaining: password reset via email (needs an SMTP story).
 - [x] **Scheduled / recurring scans.** ~~Cron-like scheduling with drift
   alerts ("new finding since last Tuesday").~~ Done in Milestone 10:
   APScheduler ticker runs due schedules (daily/weekly); creation requires
@@ -46,17 +46,20 @@ present. Ordered roughly by value-to-effort for a student project.
 
 ## Nice to have
 
-- [ ] **Multi-user / team workspaces** with roles (viewer, operator, admin).
-- [ ] **Notification webhooks** (Slack/email) on scan completion or new
-  critical findings.
+- [x] **Multi-user / team workspaces** with roles (viewer, operator, admin).
+  ~~Done in Milestone 15: viewer (read-only), operator (runs/triages scans,
+  manages schedules), admin (users, tokens, audit). Admin UI at /users;
+  last-admin and self-demotion guards.~~
+- [x] **Notification webhooks** (Slack/email) on scan completion or new
+  critical findings. ~~Done in Milestone 16: per-schedule webhook URL,
+  drift-summary JSON POST on every scheduled run completion.~~
 - [ ] **Baseline diffing in the UI.** The `/scans/compare` engine exists;
   promote it to first-class "baseline vs now" tracking per asset.
 - [x] **Production deployment guide.** ~~Gunicorn + reverse proxy + TLS,
   `SESSION_COOKIE_SECURE`, pinned dependencies (`requirements.txt` with
-  hashes), container image.~~ Partially done in Milestone 8: waitress
-  production server by default (`NETVULNX_DEBUG=1` for the dev server),
-  pinned requirements, production checklist in AUTHENTICATION.md.
-  Remaining: reverse-proxy + TLS recipe, container image.
+  hashes), container image.~~ Done in Milestone 17: Dockerfile (non-root,
+  volume for the DB), docker-compose.yml, and docs/DEPLOYMENT.md (Caddy
+  HTTPS recipe, systemd unit, env-var reference, pre-flight checklist).
 - [ ] **i18n.** The UI strings are plain English in templates — extractable.
 
 ## Explicitly not on the roadmap

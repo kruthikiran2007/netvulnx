@@ -31,13 +31,18 @@ if __name__ == "__main__":
     if not _is_reloader_parent:
         _scheduler.start_scheduler(app)
 
+    # Bind address: 127.0.0.1 keeps the app reachable only from this
+    # machine (the safe default). Inside Docker the app must bind
+    # 0.0.0.0 to be reachable at all — set NETVULNX_HOST for that.
+    # Never bind 0.0.0.0 without a firewall / reverse proxy in front.
+    _host = os.environ.get("NETVULNX_HOST", "127.0.0.1")
+
     if os.environ.get("NETVULNX_DEBUG") == "1":
         # Development: helpful error pages, auto-reload on code changes.
-        app.run(host="127.0.0.1", port=5000, debug=True)
+        app.run(host=_host, port=5000, debug=True)
     else:
-        # Production-grade server. host="127.0.0.1" means the app is only
-        # reachable from THIS machine, not from the network.
+        # Production-grade server.
         from waitress import serve
-        print("Serving with waitress on http://127.0.0.1:5000 "
+        print(f"Serving with waitress on http://{_host}:5000 "
               "(NETVULNX_DEBUG=1 for the Flask dev server)")
-        serve(app, host="127.0.0.1", port=5000)
+        serve(app, host=_host, port=5000)

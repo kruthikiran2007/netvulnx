@@ -12,7 +12,9 @@ class Config:
     # --- Database ---
     # SQLite stores the whole database in a single file on disk.
     # No database server to install or configure.
-    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(BASE_DIR, "netvulnx.db")
+    # Override the location with NETVULNX_DB_PATH (the Docker image does).
+    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.environ.get(
+        "NETVULNX_DB_PATH", os.path.join(BASE_DIR, "netvulnx.db"))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # --- Web sessions ---
