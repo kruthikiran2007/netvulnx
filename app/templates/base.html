@@ -15,6 +15,7 @@
       <a href="{{ url_for('main.asset_inventory') }}">Assets</a>
       <a href="{{ url_for('main.attack_surface') }}">Attack surface</a>
       <a href="{{ url_for('main.scan_list') }}">Scans</a>
+      <a href="{{ url_for('main.schedule_list') }}">Schedules</a>
       <a href="{{ url_for('main.new_scan_form') }}" class="btn">+ New scan</a>
       {% if current_user.is_admin %}
       <a href="{{ url_for('main.audit_log') }}">Audit</a>

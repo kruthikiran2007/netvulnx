@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}New schedule · NetVulnX{% endblock %}
+{% block content %}
+<h1>New recurring scan</h1>
+
+<div class="notice">
+  <strong>Scope &amp; authorization.</strong>
+  A schedule re-scans the same target automatically. The checkbox below is
+  your <strong>explicit standing authorization</strong> for these recurring
+  runs — the scheduler will not touch the target without it, and every run
+  is logged in the audit trail.
+</div>
+
+<form method="post" action="{{ url_for('main.schedule_new_submit') }}" class="form">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+  <label>
+    Schedule name
+    <input type="text" name="name" value="{{ name or '' }}" maxlength="120"
+           placeholder="e.g. Weekly lab baseline">
+  </label>
+
+  <label>
+    Target
+    <input type="text" name="target" value="{{ target or '' }}" required
+           placeholder="127.0.0.1  or  192.168.56.0/24  or  mylab.local">
+    <span class="hint">An IP address, a CIDR range (max /24), or a hostname.</span>
+  </label>
+
+  <fieldset class="profiles">
+    <legend>Scan profile — each has clearly defined behavior</legend>
+    {% for key, p in profiles.items() %}
+    <label class="profile-card">
+      <input type="radio" name="profile" value="{{ key }}"
+             {% if (profile or 'standard') == key %}checked{% endif %}>
+      <span class="profile-name">{{ p.label }}</span>
+      <span class="profile-desc">{{ p.description }}</span>
+      {% if p.ports is not none %}
+      <span class="profile-meta">{{ p.ports|length }} ports</span>
+      {% endif %}
+    </label>
+    {% endfor %}
+  </fieldset>
+
+  <label>
+    Ports to check <span class="hint-inline">(used only for the Custom profile)</span>
+    <input type="text" name="ports" value="{{ ports or default_ports }}">
+    <span class="hint">Comma-separated and/or ranges, e.g. <code>80,443</code> or <code>20-25,80</code>. Max 1024 ports.</span>
+  </label>
+
+  <label>
+    How often
+    <select name="interval">
+      {% for iv in intervals %}
+      <option value="{{ iv }}" {% if (interval or 'daily') == iv %}selected{% endif %}>
+        {{ iv|capitalize }}
+      </option>
+      {% endfor %}
+    </select>
+    <span class="hint">First run happens within a few minutes, then on this cadence.</span>
+  </label>
+
+  <label class="check">
+    <input type="checkbox" name="authorize_recurring" value="yes">
+    <strong>I authorize NetVulnX to scan this target automatically on this
+    schedule.</strong> I own this target (or have written permission to test
+    it), and I understand each run will be logged.
+  </label>
+
+  <button class="btn primary" type="submit">Create schedule</button>
+</form>
+{% endblock %}

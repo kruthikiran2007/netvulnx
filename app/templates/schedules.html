@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Schedules · NetVulnX{% endblock %}
+{% block content %}
+<h1>Recurring scans</h1>
+<p><a class="btn primary" href="{{ url_for('main.schedule_new_form') }}">+ New schedule</a></p>
+
+{% if schedules %}
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th><th>Target</th><th>Profile</th><th>Every</th>
+      <th>Next run</th><th>Runs</th><th>Status</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in schedules %}
+    <tr>
+      <td>{{ s.name }}</td>
+      <td><code>{{ s.target_raw }}</code></td>
+      <td>{{ s.profile }}</td>
+      <td>{{ s.interval }}</td>
+      <td>{% if s.enabled %}{{ s.next_run_at }}{% else %}<span class="muted">paused</span>{% endif %}</td>
+      <td>{{ s.scans|length }}</td>
+      <td>{% if s.enabled %}<span class="badge ok">on</span>{% else %}<span class="badge muted">off</span>{% endif %}</td>
+      <td>
+        <form method="post" action="{{ url_for('main.schedule_toggle', schedule_id=s.id) }}" style="display:inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="btn small" type="submit">{% if s.enabled %}Pause{% else %}Resume{% endif %}</button>
+        </form>
+        <form method="post" action="{{ url_for('main.schedule_delete', schedule_id=s.id) }}" style="display:inline"
+              onsubmit="return confirm('Delete this schedule and all its runs?');">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="btn small danger" type="submit">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No schedules yet. Create one to re-scan a target automatically —
+each run is compared with the previous one so you see what changed.</p>
+{% endif %}
+{% endblock %}

@@ -19,7 +19,8 @@ from sqlalchemy import func
 from app import db
 from app import auth as auth_lib
 from app.models import (Scan, Asset, Port, Finding, FINDING_STATUSES,
-                        CLOSED_STATUSES, User, AuditEvent)
+                        CLOSED_STATUSES, User, AuditEvent, ScheduledScan)
+from app.drift import drift_for_scan
 from app.stats import (severity_counts, worst_severity, service_exposure,
                        inventory_rows, risk_history, recent_findings)
 from app.diff import compare_findings, compare_ports, summarize
@@ -308,10 +309,13 @@ def scan_detail(scan_id):
     closed = sum(1 for f in findings if f.status in CLOSED_STATUSES)
     remediation = {"total": len(findings), "closed": closed,
                    "open": len(findings) - closed}
+    # Milestone 10: for scheduled runs, what changed since the last run.
+    drift = drift_for_scan(scan) if scan.schedule_id else None
     return render_template("scan_detail.html", scan=scan, findings=findings,
                            sev_counts=sev_counts, formula_text=FORMULA_TEXT,
                            remediation=remediation,
-                           finding_statuses=FINDING_STATUSES)
+                           finding_statuses=FINDING_STATUSES,
+                           drift=drift)
 
 
 @bp.post("/findings/<int:finding_id>/status")
@@ -490,3 +494,113 @@ def audit_log():
     events = (AuditEvent.query
               .order_by(AuditEvent.created_at.desc()).limit(200).all())
     return render_template("audit.html", events=events)
+
+
+# ---------------- Milestone 10: recurring scans ----------------
+
+@bp.get("/schedules")
+def schedule_list():
+    """All recurring scan schedules, soonest run first."""
+    schedules = (ScheduledScan.query
+                 .order_by(ScheduledScan.next_run_at).all())
+    return render_template("schedules.html", schedules=schedules)
+
+
+@bp.get("/schedules/new")
+def schedule_new_form():
+    return render_template("new_schedule.html",
+                           default_ports=Config.DEFAULT_PORTS,
+                           profiles=Config.SCAN_PROFILES,
+                           intervals=ScheduledScan.INTERVALS)
+
+
+@bp.post("/schedules/new")
+def schedule_new_submit():
+    """Create a recurring scan.
+
+    The authorization checkbox is the recurring-scan version of the
+    one-off safety gate: ticking it is the explicit opt-in that lets
+    the scheduler touch this target on its own, and it's audit-logged.
+    """
+    from datetime import timedelta
+    user = auth_lib.current_user()
+    name = request.form.get("name", "").strip() or "Untitled schedule"
+    target_text = request.form.get("target", "")
+    ports_text = request.form.get("ports", "")
+    profile = request.form.get("profile", "standard")
+    interval = request.form.get("interval", "daily")
+    if profile not in Config.SCAN_PROFILES:
+        profile = "standard"
+    if interval not in ScheduledScan.INTERVALS:
+        interval = "daily"
+
+    if request.form.get("authorize_recurring") != "yes":
+        flash("Tick the authorization checkbox — recurring scans need your "
+              "explicit opt-in before anything is scheduled.", "error")
+        return render_template("new_schedule.html",
+                               default_ports=Config.DEFAULT_PORTS,
+                               profiles=Config.SCAN_PROFILES,
+                               intervals=ScheduledScan.INTERVALS,
+                               target=target_text, ports=ports_text,
+                               name=name, profile=profile,
+                               interval=interval), 400
+    try:
+        target = parse_target(target_text, allow_public=Config.ALLOW_PUBLIC_TARGETS)
+        ports = _resolve_ports(profile, ports_text)
+    except TargetError as exc:
+        flash(str(exc), "error")
+        return render_template("new_schedule.html",
+                               default_ports=Config.DEFAULT_PORTS,
+                               profiles=Config.SCAN_PROFILES,
+                               intervals=ScheduledScan.INTERVALS,
+                               target=target_text, ports=ports_text,
+                               name=name, profile=profile,
+                               interval=interval), 400
+
+    sched = ScheduledScan(
+        name=name,
+        target_raw=target_text,
+        target_type=target["type"],
+        ports_raw=",".join(map(str, ports)),
+        profile=profile,
+        interval=interval,
+        # First run within a few minutes so the user can see it working,
+        # then every interval after that.
+        next_run_at=datetime.now(timezone.utc) + timedelta(minutes=2),
+        created_by=user.username if user else "admin",
+    )
+    db.session.add(sched)
+    db.session.commit()
+    auth_lib.log_audit(
+        "schedule.created",
+        f"schedule #{sched.id} '{sched.name}' -> {sched.target_raw} "
+        f"[{sched.profile}, {sched.interval}] — recurring authorization "
+        f"granted by {sched.created_by}")
+    flash(f"Schedule '{sched.name}' created — first run within a few "
+          f"minutes, then {interval}.", "info")
+    return redirect(url_for("main.schedule_list"))
+
+
+@bp.post("/schedules/<int:schedule_id>/toggle")
+def schedule_toggle(schedule_id):
+    """Enable/disable a schedule. Disabled schedules never run."""
+    sched = ScheduledScan.query.get_or_404(schedule_id)
+    sched.enabled = not sched.enabled
+    db.session.commit()
+    state = "enabled" if sched.enabled else "disabled"
+    auth_lib.log_audit("schedule.toggled",
+                       f"schedule #{sched.id} '{sched.name}' {state}")
+    flash(f"Schedule '{sched.name}' {state}.", "info")
+    return redirect(url_for("main.schedule_list"))
+
+
+@bp.post("/schedules/<int:schedule_id>/delete")
+def schedule_delete(schedule_id):
+    """Delete a schedule and its runs. Findings history goes with them."""
+    sched = ScheduledScan.query.get_or_404(schedule_id)
+    name = sched.name
+    db.session.delete(sched)
+    db.session.commit()
+    auth_lib.log_audit("schedule.deleted", f"schedule #{schedule_id} '{name}'")
+    flash(f"Schedule '{name}' deleted.", "info")
+    return redirect(url_for("main.schedule_list"))

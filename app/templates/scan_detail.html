@@ -38,6 +38,25 @@
   <div class="flash error">{{ scan.error }}</div>
 {% endif %}
 
+{% if drift %}
+  <div class="notice">
+    <strong>Drift since run #{{ drift.previous_scan_id }}</strong>
+    (completed {{ drift.previous_completed_at.strftime("%Y-%m-%d %H:%M") if drift.previous_completed_at else "—" }}):
+    <span class="badge warn">{{ drift.new|length }} new</span>
+    <span class="badge ok">{{ drift.resolved|length }} resolved</span>
+    <span class="muted">— a change signal, not proof; verify before acting.</span>
+    {% if drift.new %}
+    <ul>
+      {% for f in drift.new[:8] %}
+      <li><span class="badge {{ f.severity }}">{{ f.severity }}</span> {{ f.title }}</li>
+      {% endfor %}
+      {% if drift.new|length > 8 %}<li class="muted">…and {{ drift.new|length - 8 }} more below.</li>{% endif %}
+    </ul>
+    {% endif %}
+  </div>
+{% endif %}
+
+
 <h2>Assets ({{ scan.assets|length }})</h2>
 {% if scan.assets %}
 <table>

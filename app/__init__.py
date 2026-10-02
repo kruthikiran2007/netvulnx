@@ -133,6 +133,7 @@ def _ensure_columns(app):
     """
     new_columns = [
         ("scans", "risk_score", "INTEGER NOT NULL DEFAULT 0"),
+        ("scans", "schedule_id", "INTEGER"),
         ("findings", "status", "VARCHAR(20) NOT NULL DEFAULT 'open'"),
         ("findings", "status_note", "TEXT"),
         ("findings", "status_updated_at", "DATETIME"),

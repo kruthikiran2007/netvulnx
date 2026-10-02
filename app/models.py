@@ -37,6 +37,12 @@ class Scan(db.Model):
     authorized = db.Column(db.Boolean, nullable=False, default=False)
     authorized_at = db.Column(db.DateTime)
 
+    # Milestone 10: which recurring schedule produced this scan (None for
+    # one-off manual scans). Lets the UI group runs and compute drift.
+    schedule_id = db.Column(db.Integer,
+                            db.ForeignKey("scheduled_scans.id"),
+                            nullable=True)
+
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
     started_at = db.Column(db.DateTime)
     completed_at = db.Column(db.DateTime)
@@ -56,6 +62,51 @@ class Scan(db.Model):
     # ...and many findings (Milestone 4+). Gives Finding a `scan` backref.
     findings = db.relationship("Finding", backref="scan",
                                cascade="all, delete-orphan")
+
+
+class ScheduledScan(db.Model):
+    """A recurring scan (Milestone 10): run this target on a schedule.
+
+    The safety gate is preserved: creating a schedule requires the same
+    explicit authorization checkbox as a one-off scan ("I authorize
+    recurring scans of this target"), logged to the audit trail. Each
+    run creates a normal Scan row linked via ``schedule_id``, so drift
+    detection can compare consecutive runs.
+    """
+    __tablename__ = "scheduled_scans"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+
+    target_raw = db.Column(db.String(255), nullable=False)
+    target_type = db.Column(db.String(20), nullable=False)
+    ports_raw = db.Column(db.String(120), nullable=False)
+    profile = db.Column(db.String(20), nullable=False, default="standard")
+
+    interval = db.Column(db.String(20), nullable=False, default="daily")
+    next_run_at = db.Column(db.DateTime, nullable=False)
+    enabled = db.Column(db.Boolean, nullable=False, default=True)
+
+    created_by = db.Column(db.String(80), nullable=False, default="admin")
+    created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+    scans = db.relationship("Scan", backref="schedule",
+                            cascade="all, delete-orphan")
+
+    INTERVALS = ("daily", "weekly")
+
+    def advance(self, now=None):
+        """Schedule the next run one interval from now.
+
+        If runs were missed while the server was off, we do NOT stack up
+        a backlog of catch-up scans — the next run is simply one interval
+        ahead.
+        """
+        from datetime import timedelta
+        now = now or _utcnow()
+        delta = timedelta(days=7) if self.interval == "weekly" \
+            else timedelta(days=1)
+        self.next_run_at = now + delta
 
 
 class Asset(db.Model):
