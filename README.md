@@ -13,7 +13,7 @@ explainably, tracks remediation, and watches for drift on a schedule.
 
 ## Screenshots
 
-> Screenshots coming from a live run — drop them in `docs/screenshots/`.
+From a real scan of a lab target (11 findings, risk score 13):
 
 | Dashboard | Scan findings | Printable report |
 |---|---|---|
