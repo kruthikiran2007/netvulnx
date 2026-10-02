@@ -128,7 +128,7 @@ def test_token_pages_require_admin(app_and_client):
         from app.models import User
         u = User(username="viewer",
                  password_hash=auth_lib.hash_password("viewerpass123"),
-                 is_admin=False)
+                 role="viewer")
         db.session.add(u)
         db.session.commit()
     client.post("/logout", data={"_csrf_token": _token(client, "/")})

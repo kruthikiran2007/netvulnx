@@ -290,19 +290,30 @@ CLOSED_STATUSES = ("resolved", "false_positive")
 
 
 class User(db.Model):
-    """A login account (Milestone 8).
+    """A login account (Milestone 8; roles in Milestone 15).
 
     Passwords are NEVER stored — only a salted hash (see app/auth.py).
-    The very first account created becomes the admin; later accounts
-    (added by an admin) are regular users.
+    The very first account created becomes the admin; later accounts are
+    added by an admin with one of three roles:
+
+    - ``viewer``: read-only (dashboard, scans, reports, exports).
+    - ``operator``: viewer + run/triage scans and manage schedules.
+    - ``admin``: everything + users, audit log, API tokens.
     """
     __tablename__ = "users"
+
+    ROLES = ("viewer", "operator", "admin")
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    is_admin = db.Column(db.Boolean, nullable=False, default=False)
+    role = db.Column(db.String(20), nullable=False, default="operator")
     created_at = db.Column(db.DateTime, nullable=False, default=_utcnow)
+
+    @property
+    def is_admin(self):
+        # Kept for templates and older code paths: admin ⟺ role "admin".
+        return self.role == "admin"
 
 
 class AuditEvent(db.Model):

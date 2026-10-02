@@ -2,7 +2,7 @@
 
 Revision ID: 794b6339bb50
 Revises: 
-Create Date: 2026-10-02 06:57:45.408928
+Create Date: 2026-10-02 07:42:02.443358
 
 """
 from alembic import op
@@ -32,6 +32,13 @@ def upgrade():
     sa.Column('fetched_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('cpe')
     )
+    op.create_table('login_throttles',
+    sa.Column('key', sa.String(length=160), nullable=False),
+    sa.Column('attempts', sa.Integer(), nullable=False),
+    sa.Column('locked_until', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=False),
+    sa.PrimaryKeyConstraint('key')
+    )
     op.create_table('scheduled_scans',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(length=120), nullable=False),
@@ -50,10 +57,23 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('username', sa.String(length=80), nullable=False),
     sa.Column('password_hash', sa.String(length=255), nullable=False),
-    sa.Column('is_admin', sa.Boolean(), nullable=False),
+    sa.Column('role', sa.String(length=20), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('username')
+    )
+    op.create_table('api_tokens',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=120), nullable=False),
+    sa.Column('prefix', sa.String(length=16), nullable=False),
+    sa.Column('token_hash', sa.String(length=64), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=False),
+    sa.Column('last_used_at', sa.DateTime(), nullable=True),
+    sa.Column('revoked', sa.Boolean(), nullable=False),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('token_hash')
     )
     op.create_table('scans',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -196,8 +216,10 @@ def downgrade():
     op.drop_table('ports')
     op.drop_table('assets')
     op.drop_table('scans')
+    op.drop_table('api_tokens')
     op.drop_table('users')
     op.drop_table('scheduled_scans')
+    op.drop_table('login_throttles')
     op.drop_table('cve_cache')
     op.drop_table('audit_events')
     # ### end Alembic commands ###

@@ -192,3 +192,14 @@ def request_has_valid_bearer():
         g.api_user = user
         return True
     return False
+
+
+#: Role hierarchy (Milestone 15): viewer < operator < admin.
+ROLE_RANK = {"viewer": 0, "operator": 1, "admin": 2}
+
+
+def has_role(user, minimum):
+    """True if the user exists and their role is at least ``minimum``."""
+    if not user or not getattr(user, "role", None):
+        return False
+    return ROLE_RANK.get(user.role, -1) >= ROLE_RANK.get(minimum, 99)

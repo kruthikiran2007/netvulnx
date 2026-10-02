@@ -166,7 +166,7 @@ def test_audit_page_requires_admin(app_and_client):
         from app import auth as auth_lib
         db.session.add(User(username="pleb",
                             password_hash=auth_lib.hash_password("testpass123"),
-                            is_admin=False))
+                            role="viewer"))
         db.session.commit()
     with app.test_client() as anon:
         _login(anon, username="pleb")

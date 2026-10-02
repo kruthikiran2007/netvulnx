@@ -165,3 +165,27 @@ def _ensure_columns(app):
                     f"ALTER TABLE {table} ADD COLUMN {column} {ctype}")
                 app.logger.info("schema: added column %s.%s", table, column)
         conn.commit()
+
+    # Milestone 15: is_admin (boolean) -> role (viewer/operator/admin).
+    _migrate_user_roles(app)
+
+
+def _migrate_user_roles(app):
+    """One-way data migration for pre-Milestone-15 databases."""
+    with db.engine.connect() as conn:
+        cols = [r[1] for r in conn.exec_driver_sql("PRAGMA table_info(users)")]
+        if "role" not in cols:
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN role VARCHAR(20) "
+                "NOT NULL DEFAULT 'operator'")
+            app.logger.info("schema: added column users.role")
+        cols = [r[1] for r in conn.exec_driver_sql("PRAGMA table_info(users)")]
+        if "is_admin" in cols:
+            conn.exec_driver_sql(
+                "UPDATE users SET role='admin' WHERE is_admin = 1")
+            conn.exec_driver_sql(
+                "UPDATE users SET role='operator' "
+                "WHERE role IS NULL OR role = '' OR role = 'operator'")
+            conn.exec_driver_sql("ALTER TABLE users DROP COLUMN is_admin")
+            app.logger.info("schema: migrated users.is_admin -> users.role")
+        conn.commit()

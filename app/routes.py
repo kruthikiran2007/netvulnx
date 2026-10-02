@@ -55,6 +55,23 @@ def _safe_back(fallback):
     return redirect(fallback)
 
 
+def _require_role(minimum):
+    """Route decorator (Milestone 15): reject below a role rank.
+
+    Viewers read; operators act on scans; admins manage everything.
+    """
+    import functools
+
+    def decorator(fn):
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            if not auth_lib.has_role(auth_lib.current_user(), minimum):
+                abort(403, description=f"Requires the '{minimum}' role.")
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 @bp.get("/")
 def dashboard():
     """Home page. Every number comes from the database — nothing is hardcoded."""
@@ -166,6 +183,7 @@ def scan_list():
 
 
 @bp.get("/scans/new")
+@_require_role("operator")
 def new_scan_form():
     return render_template("new_scan.html",
                            default_ports=Config.DEFAULT_PORTS,
@@ -180,6 +198,7 @@ def _resolve_ports(profile: str, ports_text: str) -> list:
 
 
 @bp.post("/scans/new")
+@_require_role("operator")
 def new_scan_submit():
     """Step 1 of scan creation: validate target + profile.
 
@@ -219,6 +238,7 @@ def new_scan_submit():
 
 
 @bp.get("/scans/<int:scan_id>/authorize")
+@_require_role("operator")
 def authorize_scan(scan_id):
     """Show EXACTLY what will be scanned, and require explicit confirmation."""
     scan = Scan.query.get_or_404(scan_id)
@@ -237,6 +257,7 @@ def authorize_scan(scan_id):
 
 
 @bp.post("/scans/<int:scan_id>/authorize")
+@_require_role("operator")
 def authorize_scan_submit(scan_id):
     """THE SAFETY GATE: nothing touches the network until the user confirms.
 
@@ -272,6 +293,7 @@ def authorize_scan_submit(scan_id):
 
 
 @bp.post("/scans/<int:scan_id>/cancel")
+@_require_role("operator")
 def cancel_scan(scan_id):
     """Ask a running scan to stop. The worker checks between phases/chunks."""
     scan = Scan.query.get_or_404(scan_id)
@@ -321,6 +343,7 @@ def scan_detail(scan_id):
 
 
 @bp.post("/findings/<int:finding_id>/status")
+@_require_role("operator")
 def finding_status(finding_id):
     """Triage one finding: mark it acknowledged / resolved / false positive.
 
@@ -439,7 +462,7 @@ def setup_submit():
         return render_template("setup.html"), 400
     user = User(username=username,
                 password_hash=auth_lib.hash_password(password),
-                is_admin=True)
+                role="admin")
     db.session.add(user)
     db.session.commit()
     auth_lib.login_user(user)
@@ -566,6 +589,7 @@ def schedule_list():
 
 
 @bp.get("/schedules/new")
+@_require_role("operator")
 def schedule_new_form():
     return render_template("new_schedule.html",
                            default_ports=Config.DEFAULT_PORTS,
@@ -574,6 +598,7 @@ def schedule_new_form():
 
 
 @bp.post("/schedules/new")
+@_require_role("operator")
 def schedule_new_submit():
     """Create a recurring scan.
 
@@ -641,6 +666,7 @@ def schedule_new_submit():
 
 
 @bp.post("/schedules/<int:schedule_id>/toggle")
+@_require_role("operator")
 def schedule_toggle(schedule_id):
     """Enable/disable a schedule. Disabled schedules never run."""
     sched = ScheduledScan.query.get_or_404(schedule_id)
@@ -654,6 +680,7 @@ def schedule_toggle(schedule_id):
 
 
 @bp.post("/schedules/<int:schedule_id>/delete")
+@_require_role("operator")
 def schedule_delete(schedule_id):
     """Delete a schedule and its runs. Findings history goes with them."""
     sched = ScheduledScan.query.get_or_404(schedule_id)
@@ -748,3 +775,84 @@ def token_revoke(token_id):
     auth_lib.log_audit("token.revoked", f"token '{token.name}'")
     flash(f"Token '{token.name}' revoked.", "info")
     return redirect(url_for("main.token_list"))
+
+
+# ---------------- Milestone 15: team roles & user management ----------------
+
+@bp.get("/users")
+@_require_role("admin")
+def user_list():
+    users = User.query.order_by(User.created_at).all()
+    return render_template("users.html", users=users, roles=User.ROLES)
+
+
+@bp.post("/users/new")
+@_require_role("admin")
+def user_create():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "")
+    role = request.form.get("role", "operator")
+    if not auth_lib.valid_username(username):
+        flash("Username: 3-40 characters, letters/digits/_/-.", "error")
+        return redirect(url_for("main.user_list"))
+    if not auth_lib.valid_password(password):
+        flash("Password must be at least 8 characters.", "error")
+        return redirect(url_for("main.user_list"))
+    if role not in User.ROLES:
+        role = "operator"
+    if User.query.filter_by(username=username).first():
+        flash("That username is taken.", "error")
+        return redirect(url_for("main.user_list"))
+    user = User(username=username,
+                password_hash=auth_lib.hash_password(password), role=role)
+    db.session.add(user)
+    db.session.commit()
+    auth_lib.log_audit("user.created",
+                       f"account '{username}' with role '{role}'")
+    flash(f"User '{username}' created as {role}.", "info")
+    return redirect(url_for("main.user_list"))
+
+
+@bp.post("/users/<int:user_id>/role")
+@_require_role("admin")
+def user_set_role(user_id):
+    user = User.query.get_or_404(user_id)
+    me = auth_lib.current_user()
+    role = request.form.get("role", "")
+    if role not in User.ROLES:
+        flash("Unknown role.", "error")
+        return redirect(url_for("main.user_list"))
+    if user.id == me.id and role != "admin":
+        flash("You can't demote yourself.", "error")
+        return redirect(url_for("main.user_list"))
+    if user.role == "admin" and role != "admin" and \
+            User.query.filter_by(role="admin").count() <= 1:
+        flash("You can't demote the last admin.", "error")
+        return redirect(url_for("main.user_list"))
+    user.role = role
+    db.session.commit()
+    auth_lib.log_audit("user.role_changed",
+                       f"account '{user.username}' -> role '{role}'")
+    flash(f"'{user.username}' is now {role}.", "info")
+    return redirect(url_for("main.user_list"))
+
+
+@bp.post("/users/<int:user_id>/delete")
+@_require_role("admin")
+def user_delete(user_id):
+    user = User.query.get_or_404(user_id)
+    me = auth_lib.current_user()
+    if user.id == me.id:
+        flash("You can't delete yourself.", "error")
+        return redirect(url_for("main.user_list"))
+    if user.role == "admin" and \
+            User.query.filter_by(role="admin").count() <= 1:
+        flash("You can't delete the last admin.", "error")
+        return redirect(url_for("main.user_list"))
+    # Revoke their API tokens too — a deleted user keeps no access.
+    ApiToken.query.filter_by(user_id=user.id).update({"revoked": True})
+    db.session.delete(user)
+    db.session.commit()
+    auth_lib.log_audit("user.deleted", f"account '{user.username}'")
+    flash(f"User '{user.username}' deleted.", "info")
+    return redirect(url_for("main.user_list"))

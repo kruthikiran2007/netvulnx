@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Users · NetVulnX{% endblock %}
+{% block content %}
+<h1>Users</h1>
+
+<p class="muted">Roles: <strong>viewer</strong> reads everything but changes
+nothing · <strong>operator</strong> runs and triages scans · <strong>admin</strong>
+manages users, tokens, and the audit log.</p>
+
+<form method="post" action="{{ url_for('main.user_create') }}" class="form">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+  <label>
+    Username
+    <input type="text" name="username" required maxlength="40">
+  </label>
+  <label>
+    Password
+    <input type="password" name="password" required>
+    <span class="hint">At least 8 characters. Share it securely — the user should change it.</span>
+  </label>
+  <label>
+    Role
+    <select name="role">
+      {% for r in roles %}
+      <option value="{{ r }}" {% if r == 'operator' %}selected{% endif %}>{{ r|capitalize }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button class="btn primary" type="submit">Create user</button>
+</form>
+
+<table class="table">
+  <thead><tr><th>Username</th><th>Role</th><th>Created</th><th></th></tr></thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td>
+        <form method="post" action="{{ url_for('main.user_set_role', user_id=u.id) }}" style="display:inline">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <select name="role" onchange="this.form.submit()">
+            {% for r in roles %}
+            <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r|capitalize }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </td>
+      <td>{{ u.created_at }}</td>
+      <td>
+        <form method="post" action="{{ url_for('main.user_delete', user_id=u.id) }}" style="display:inline"
+              onsubmit="return confirm('Delete user {{ u.username }}? Their API tokens will be revoked.');">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="btn small danger" type="submit">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
