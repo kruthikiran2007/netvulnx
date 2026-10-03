@@ -85,7 +85,15 @@ def start_scheduler(app):
         return _scheduler
     if app.config.get("TESTING"):
         return None
-    _scheduler = BackgroundScheduler(daemon=True)
+    try:
+        _scheduler = BackgroundScheduler(daemon=True)
+    except Exception as exc:
+        # Some systems set TZ to a name tzlocal can't parse
+        # (e.g. Asia/Calcutta instead of Asia/Kolkata). The scheduler
+        # must never prevent the app from starting, so fall back to UTC.
+        app.logger.warning(
+            f"scheduler: local timezone unusable ({exc}); using UTC")
+        _scheduler = BackgroundScheduler(daemon=True, timezone="UTC")
     _scheduler.add_job(lambda: _tick(app), "interval", seconds=60,
                        id="netvulnx-schedules", replace_existing=True)
     _scheduler.start()
