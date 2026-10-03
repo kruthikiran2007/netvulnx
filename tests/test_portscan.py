@@ -47,6 +47,23 @@ def test_open_port_detected():
         srv.shutdown()
 
 
+def _wait_for_closed(port, timeout=10.0):
+    """Poll until the port reports 'closed' (or the deadline passes).
+
+    On Windows the TCP stack can take a moment after server_close()
+    before connection attempts get RST instead of hanging; without this
+    the test flakes between 'closed' and 'filtered'.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        res = portscan.scan_ports("127.0.0.1", [port], timeout=1.0,
+                                  max_workers=1)
+        state = res["ports"][port]["state"]
+        if state == "closed" or time.monotonic() >= deadline:
+            return state
+        time.sleep(0.5)
+
+
 def test_closed_port_detected_as_closed():
     srv = _start_server()
     port = srv.server_address[1]
@@ -54,9 +71,7 @@ def test_closed_port_detected_as_closed():
     # so the port truly becomes "connection refused".
     srv.shutdown()
     srv.server_close()
-    time.sleep(0.2)
-    res = portscan.scan_ports("127.0.0.1", [port], timeout=2.0, max_workers=4)
-    assert res["ports"][port]["state"] == "closed"
+    assert _wait_for_closed(port) == "closed"
 
 
 def test_mixed_ports_sorted_and_counted():
@@ -64,6 +79,7 @@ def test_mixed_ports_sorted_and_counted():
     try:
         open_port = srv.server_address[1]
         closed_port = _free_port()
+        assert _wait_for_closed(closed_port) == "closed"
         res = portscan.scan_ports("127.0.0.1", [closed_port, open_port],
                                   timeout=2.0, max_workers=4)
         assert res["open"] == [open_port]

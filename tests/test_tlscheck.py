@@ -3,6 +3,7 @@
 A real TLS server (self-signed cert generated with openssl) runs in-process
 on 127.0.0.1. Pure parsing helpers are tested without any network.
 """
+import shutil
 import socketserver
 import ssl
 import subprocess
@@ -11,6 +12,11 @@ import threading
 import pytest
 
 from scanner import tlscheck
+
+
+needs_openssl = pytest.mark.skipif(
+    shutil.which("openssl") is None,
+    reason="openssl CLI not installed (needed to generate test certificates)")
 
 
 def _make_cert(tmp_path):
@@ -54,6 +60,7 @@ class _TLSServer(socketserver.TCPServer):
 
 
 @pytest.fixture()
+@needs_openssl
 def tls_server(tmp_path):
     cert, key = _make_cert(tmp_path)
     srv = _TLSServer(("127.0.0.1", 0), _TLSHandler, cert, key)

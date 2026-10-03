@@ -3,11 +3,19 @@
 Fake protocol servers run in-process on 127.0.0.1. Each test asserts not just
 the identified service but the CONFIDENCE — the honesty contract of this module.
 """
+import shutil
 import socketserver
 import threading
 import time
 
+import pytest
+
 from scanner import fingerprint
+
+
+needs_openssl = pytest.mark.skipif(
+    shutil.which("openssl") is None,
+    reason="openssl CLI not installed (needed to generate test certificates)")
 
 
 def _serve(handler_cls, banner=None):
@@ -146,6 +154,7 @@ def test_banner_truncated_for_storage():
         srv.shutdown()
 
 
+@needs_openssl
 def test_tls_service_detected_via_handshake(tmp_path):
     """A TLS service on a non-standard port answers no plaintext probe;
     fingerprinting should still identify it via one real handshake."""

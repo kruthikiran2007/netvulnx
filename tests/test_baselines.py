@@ -32,6 +32,10 @@ def app():
                             role="operator"))
         db.session.commit()
         yield app
+        # Windows locks open SQLite files: release all pooled connections
+        # before deleting, or unlink() raises PermissionError.
+        db.session.remove()
+        db.engine.dispose()
     os.unlink(path)
 
 

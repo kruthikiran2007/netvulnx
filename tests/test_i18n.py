@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from app import create_app
+from app import create_app, db
 from config import Config
 
 
@@ -19,6 +19,11 @@ def app():
 
     app = create_app(TConfig)
     yield app
+    # Windows locks open SQLite files: release all pooled connections
+    # before deleting, or unlink() raises PermissionError.
+    with app.app_context():
+        db.session.remove()
+        db.engine.dispose()
     os.unlink(path)
 
 
