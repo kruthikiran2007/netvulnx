@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Outbound notifications (Milestone 16).
 
 When a SCHEDULED scan completes, the schedule's webhook URL (Slack,

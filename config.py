@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """NetVulnX configuration.
 
 This file holds the application's settings in ONE place.

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for i18n (Milestone 21): catalog lookup, fallback, switching."""
 import json
 

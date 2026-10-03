@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for the email password-reset flow (Milestone 20).
 
 Uses throwaway SQLite databases and a fake SMTP outbox — no real email

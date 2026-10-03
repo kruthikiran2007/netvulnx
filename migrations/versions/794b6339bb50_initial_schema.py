@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """initial schema
 
 Revision ID: 794b6339bb50

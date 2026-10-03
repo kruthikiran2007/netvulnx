@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Finding exports (Milestone 11): CSV and JSON downloads of a scan.
 
 Machine-readable output for ticketing tools, spreadsheets, and further

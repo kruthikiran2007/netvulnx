@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Target parsing and scope validation.
 
 This module answers two questions BEFORE any packet leaves the machine:

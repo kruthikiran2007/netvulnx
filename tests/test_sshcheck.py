@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for the SSH algorithm analyzer (Milestone 18).
 
 A fake SSH server performs the real version + KEXINIT handshake with

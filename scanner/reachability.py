@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Host reachability checks — the first REAL network operation in NetVulnX.
 
 For each host we attempt a TCP connection to each requested port and record:

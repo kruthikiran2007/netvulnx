@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over the RDP protocol analysis (Milestone 20).
 
 The check (scanner/rdpcheck.py) performs the standard X.224 connection

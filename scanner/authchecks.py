@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Authenticated checks (Milestone 21).
 
 How credentials are handled — the important part:

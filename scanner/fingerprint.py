@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Service fingerprinting: WHAT is listening on an open port, and how sure are we?
 
 A port number alone is only a hint — anyone can run HTTP on port 22.

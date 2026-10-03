@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for the NoSQL / search-engine checks (Milestone 22).
 
 Fake MongoDB / Elasticsearch / Memcached servers speak the real wire

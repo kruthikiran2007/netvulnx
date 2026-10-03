@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for drift baselines (Milestone 21).
 
 Uses the real Flask app + real database: create scans with findings,

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for UDP service discovery (Milestone 19).
 
 NOTE on this environment: the sandbox blocks UDP socket creation

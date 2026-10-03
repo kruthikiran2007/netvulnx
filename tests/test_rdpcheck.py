@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for the RDP protocol analyzer (Milestone 20).
 
 A fake RDP server performs the real X.224 Connection Request/Confirm

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Scan orchestrator — runs the full assessment pipeline for one scan.
 
 Pipeline per host:

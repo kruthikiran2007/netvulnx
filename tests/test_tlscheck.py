@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for scanner/tlscheck.py.
 
 A real TLS server (self-signed cert generated with openssl) runs in-process

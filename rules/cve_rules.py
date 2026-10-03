@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """CVE mapping rule (Milestone 9).
 
 One rule, ``cve-known-vulnerabilities``: when the fingerprinter identified a

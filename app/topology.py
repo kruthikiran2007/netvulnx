@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Network topology view (Milestone 21).
 
 An honest asset map: every host NetVulnX has actually observed (Asset

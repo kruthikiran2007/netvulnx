@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Web pages and actions.
 
 A "blueprint" is Flask's way of grouping related pages together.

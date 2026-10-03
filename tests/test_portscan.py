@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for scanner/portscan.py.
 
 We spin up REAL tiny TCP servers on 127.0.0.1 (in-process, ephemeral ports)

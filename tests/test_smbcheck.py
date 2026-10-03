@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for the SMB protocol analyzer (Milestone 20).
 
 A fake SMB server performs the real SMB2 + SMB1 negotiate handshakes

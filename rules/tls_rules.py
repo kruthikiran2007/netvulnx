@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over TLS observations (TlsInfo rows from scanner/tlscheck.py).
 
 Every rule here fires only on a directly measured fact: we completed the

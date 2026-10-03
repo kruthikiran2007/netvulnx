@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Dashboard, inventory and attack-surface aggregations.
 
 Every function here is PURE: it takes rows (SQLAlchemy objects or

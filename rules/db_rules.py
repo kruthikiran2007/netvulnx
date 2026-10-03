@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over the database greeting checks (Milestone 21).
 
 The checks (scanner/dbcheck.py) never authenticate:

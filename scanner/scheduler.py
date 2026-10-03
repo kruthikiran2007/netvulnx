@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Recurring scans (Milestone 10).
 
 A BackgroundScheduler ticks every minute and runs any enabled schedule

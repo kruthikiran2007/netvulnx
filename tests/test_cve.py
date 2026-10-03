@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for CVE mapping (Milestone 9).
 
 Network is never touched: _fetch fakes stand in for the NVD API, and the

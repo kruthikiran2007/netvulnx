@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for the database greeting checks (Milestone 21).
 
 Fake MySQL / PostgreSQL / Redis servers speak the real wire protocol so

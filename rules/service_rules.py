@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over safe service-specific checks (ServiceCheck rows).
 
 These come from the read-only probes in scanner/servicecheck.py:

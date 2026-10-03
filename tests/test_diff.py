@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Unit tests for app/diff.py — pure scan-comparison helpers."""
 from types import SimpleNamespace
 

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over UDP service discovery (Milestone 19).
 
 A UDP port is only recorded when a probe got a well-formed protocol

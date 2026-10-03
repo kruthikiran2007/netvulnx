@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Unit tests for target parsing and scope validation.
 
 Run with:  python -m pytest tests/ -v   (from the project folder)

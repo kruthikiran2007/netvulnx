@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for authentication, the login gate, and the audit log (Milestone 8).
 
 Uses throwaway SQLite databases — never the dev database.

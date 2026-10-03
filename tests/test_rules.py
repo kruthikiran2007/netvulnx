@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Unit tests for the rule engine (Milestone 4).
 
 We test rule LOGIC with synthetic observation objects — that is legitimate

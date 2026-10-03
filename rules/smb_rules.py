@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over the SMB protocol analysis (Milestone 20).
 
 The check (scanner/smbcheck.py) performs the standard SMB2 + SMB1

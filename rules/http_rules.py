@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over HTTP observations (HttpInfo rows from scanner/httpcheck.py).
 
 All of these fire on response headers / bodies we actually received.

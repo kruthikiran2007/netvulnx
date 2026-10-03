@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Outgoing email (Milestone 20).
 
 Currently used for password-reset links. Sending is deliberately simple

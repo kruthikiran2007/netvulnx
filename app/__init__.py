@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Flask application factory.
 
 An "app factory" is just a function that builds and returns the Flask app.

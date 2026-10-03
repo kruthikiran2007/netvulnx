@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Risk scoring: a deliberately simple, fully explainable formula.
 
 Score = sum of severity weights across all findings in a scan.

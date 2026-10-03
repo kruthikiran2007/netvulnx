@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """scheduled scan webhooks
 
 Revision ID: fe152a39d862

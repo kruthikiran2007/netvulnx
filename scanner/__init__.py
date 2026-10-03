@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Network scanning code lives here.
 
 scanner/targets.py       -> parse + validate user targets (IP / CIDR / hostname)

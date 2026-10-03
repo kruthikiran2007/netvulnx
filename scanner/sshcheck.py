@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """SSH algorithm enumeration (Milestone 18).
 
 What this does: opens a TCP connection, reads the server's version string,

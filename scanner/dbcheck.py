@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Database greeting checks (Milestone 21).
 
 Three read-only probes that never authenticate and never send credentials:

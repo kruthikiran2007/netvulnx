@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for CSRF protection and security headers (Milestone 7).
 
 Uses a throwaway SQLite database — never the dev database.

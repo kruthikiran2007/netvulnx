@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """password reset tokens + user email
 
 Revision ID: 3c1e7a4b9d20

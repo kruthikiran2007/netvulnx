@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Add baselines table for per-target drift tracking (Milestone 21).
 
 Idempotent: create_all() (which runs before migrations at startup)

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """UDP service discovery (Milestone 19).
 
 UDP has no handshake, so "is this port open?" is fundamentally uncertain:

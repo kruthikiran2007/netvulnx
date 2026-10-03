@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for webhook notifications (Milestone 16)."""
 import tempfile
 

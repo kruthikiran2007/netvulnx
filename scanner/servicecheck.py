@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Safe, read-only service-specific observations.
 
 Each check completes the protocol's greeting and quits politely.

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Database migrations at startup (Milestone 12).
 
 How schema changes work now:

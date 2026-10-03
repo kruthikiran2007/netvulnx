@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over the SSH algorithm enumeration (Milestone 18).
 
 The check (scanner/sshcheck.py) performs the standard SSH version +

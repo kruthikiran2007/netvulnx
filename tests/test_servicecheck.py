@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for scanner/servicecheck.py.
 
 Fake DNS/SMTP/FTP servers run in-process on 127.0.0.1. DNS wire-format

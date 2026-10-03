@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """NoSQL / search-engine greeting checks (Milestone 22).
 
 Three read-only probes that never authenticate and never write data:

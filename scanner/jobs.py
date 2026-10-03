@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Background scan jobs.
 
 Why background? A deep scan of a /24 can take minutes. The web request that

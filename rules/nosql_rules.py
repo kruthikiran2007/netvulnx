@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over the NoSQL / search-engine checks (Milestone 22).
 
 The checks (scanner/nosqlcheck.py) never authenticate and never write:

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """HTTP(S) service analysis — one careful request per service.
 
 Read-only observations from a single GET / (plus redirect hops):

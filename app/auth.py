@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Authentication and audit logging (Milestone 8).
 
 Passwords: never stored. We keep only a salted hash made by Werkzeug's

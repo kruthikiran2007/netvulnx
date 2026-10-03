@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Alembic environment: run migrations against the app's database.
 
 The app package is imported ONLY for db.metadata — create_app() is never

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for scanner/fingerprint.py.
 
 Fake protocol servers run in-process on 127.0.0.1. Each test asserts not just

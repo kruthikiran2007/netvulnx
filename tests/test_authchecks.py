@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for authenticated checks (Milestone 21).
 
 * The credential vault: store/take/has semantics, single-use pop.

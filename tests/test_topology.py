@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for the network topology view (Milestone 21)."""
 from types import SimpleNamespace
 

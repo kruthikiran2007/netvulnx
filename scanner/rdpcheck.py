@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """RDP protocol analyzer (Milestone 20).
 
 What this does: opens a TCP connection to the RDP port and performs the

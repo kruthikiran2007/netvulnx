@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Database models — the shape of our stored data.
 
 Each class below becomes a TABLE in the SQLite database, each object becomes

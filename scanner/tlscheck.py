@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """TLS/SSL analysis — read-only handshake inspection.
 
 For each port serving TLS we record:

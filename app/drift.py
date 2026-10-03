@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Drift detection (Milestone 10): what changed since the last scheduled run.
 
 A "finding identity" is (rule_id, port number, title). A finding in the

@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Unit tests for app/stats.py — pure aggregation helpers.
 
 We build lightweight stand-in rows with SimpleNamespace instead of a

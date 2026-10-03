@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for login hardening (Milestone 13): brute-force lockout,
 password change, and secure cookie settings."""
 import re

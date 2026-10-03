@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Rules over the authenticated SSH config audit (Milestone 21).
 
 The check (scanner/authchecks.py) logs in with user-supplied credentials

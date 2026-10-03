@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for recurring scans and drift detection (Milestone 10).
 
 Throwaway SQLite databases; the background scheduler is never started

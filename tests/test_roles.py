@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for team roles (Milestone 15): viewer / operator / admin."""
 import re
 import tempfile

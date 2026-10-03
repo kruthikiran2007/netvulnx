@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """TCP port scanner — the Milestone-2 scan engine.
 
 How it works: for each port we attempt a TCP connection ("connect scan").

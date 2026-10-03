@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Minimal CSRF protection (no extra dependencies).
 
 How it works: when a page with a form is rendered, the template calls

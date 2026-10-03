@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """Tests for Alembic migrations (Milestone 12).
 
 Uses throwaway SQLite databases — never the dev database.

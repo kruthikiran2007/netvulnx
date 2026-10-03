@@ -1,3 +1,4 @@
+# Copyright (c) 2026 kruthikiran2007. Licensed under the MIT License.
 """The rule engine: deterministic detection, no invented findings.
 
 How it works:
