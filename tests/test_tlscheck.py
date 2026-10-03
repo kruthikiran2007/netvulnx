@@ -41,6 +41,11 @@ class _TLSServer(socketserver.TCPServer):
         super().__init__(addr, handler)
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         ctx.load_cert_chain(certfile, keyfile)
+        # Pin the floor explicitly: whether a "default" context allows
+        # TLS 1.0 depends on the platform's OpenSSL security level
+        # (Kali allows it, Ubuntu does not). The test's intent is a
+        # modern, normally-configured server.
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         self._ctx = ctx
 
     def get_request(self):
