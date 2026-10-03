@@ -93,7 +93,15 @@ def parse_target(text: str, allow_public: bool = False) -> dict:
         hosts = [str(h) for h in net.hosts()]
         if not hosts:
             raise TargetError(f"'{text}' contains no usable host addresses.")
-        if not _in_allowed_scope(ipaddress.ip_address(hosts[0]), allow_public):
+        # The whole network must sit inside the allowed scope — checking only
+        # the first host is not enough (e.g. ::/120 starts at ::1 which is
+        # allowed, but the other 254 addresses are not).
+        if allow_public:
+            # Explicit opt-in: still never allow multicast/reserved/unspecified.
+            if net.is_multicast or net.is_reserved or net.is_unspecified:
+                raise _scope_rejection(text)
+        elif not any(net.version == allowed.version and net.subnet_of(allowed)
+                     for allowed in _ALLOWED_NETWORKS):
             raise _scope_rejection(text)
         return {"type": "cidr", "hosts": hosts, "network": str(net),
                 "display": f"{net} ({len(hosts)} hosts)"}

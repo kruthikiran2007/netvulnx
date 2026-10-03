@@ -93,7 +93,13 @@ def start_scheduler(app):
         # must never prevent the app from starting, so fall back to UTC.
         app.logger.warning(
             f"scheduler: local timezone unusable ({exc}); using UTC")
-        _scheduler = BackgroundScheduler(daemon=True, timezone="UTC")
+        try:
+            _scheduler = BackgroundScheduler(daemon=True, timezone="UTC")
+        except Exception as exc2:
+            # Even the UTC fallback failed — log it and run without
+            # scheduled scans rather than crashing the whole app.
+            app.logger.warning(f"scheduler: disabled ({exc2})")
+            return None
     _scheduler.add_job(lambda: _tick(app), "interval", seconds=60,
                        id="netvulnx-schedules", replace_existing=True)
     _scheduler.start()

@@ -16,6 +16,15 @@ CSV_COLUMNS = [
 ]
 
 
+def _safe_cell(v):
+    """Neutralize CSV formula injection: attacker-influenced scan data
+    (banners, cert fields) starting with = + - @ or whitespace could
+    become a live spreadsheet formula when opened in Excel/LibreOffice."""
+    if isinstance(v, str) and v[:1] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + v
+    return v
+
+
 def _finding_row(f):
     port = f.port
     refs = f.references or "[]"
@@ -25,20 +34,20 @@ def _finding_row(f):
         pass
     return {
         "finding_id": f.id,
-        "title": f.title,
+        "title": _safe_cell(f.title),
         "severity": f.severity,
         "confidence": f.confidence,
         "status": f.status,
         "rule_id": f.rule_id,
         "port": port.port if port else "",
-        "service": port.service if port else "",
-        "product": port.product if port else "",
-        "version": port.version if port else "",
-        "description": f.description or "",
-        "impact": f.impact or "",
-        "remediation": f.remediation or "",
-        "references": refs,
-        "evidence": f.evidence or "",
+        "service": _safe_cell(port.service) if port else "",
+        "product": _safe_cell(port.product) if port else "",
+        "version": _safe_cell(port.version) if port else "",
+        "description": _safe_cell(f.description or ""),
+        "impact": _safe_cell(f.impact or ""),
+        "remediation": _safe_cell(f.remediation or ""),
+        "references": _safe_cell(refs),
+        "evidence": _safe_cell(f.evidence or ""),
     }
 
 

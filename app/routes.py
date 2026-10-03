@@ -12,6 +12,7 @@ import math
 import json
 import secrets
 from datetime import datetime, timezone, timedelta
+from urllib.parse import unquote
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, jsonify, abort, session)
@@ -55,6 +56,17 @@ def _safe_back(fallback):
     if ref.startswith(request.host_url):
         return redirect(ref)
     return redirect(fallback)
+
+
+def _safe_webhook_url(raw):
+    """Accept only http/https webhook URLs; anything else is stored as None
+    rather than letting file://, gopher:// etc. into the database."""
+    url = (raw or "").strip()
+    if not url:
+        return None
+    if url.lower().startswith(("http://", "https://")):
+        return url
+    return None
 
 
 def _require_role(minimum):
@@ -636,7 +648,12 @@ def login_submit():
     auth_lib.log_audit("login.ok", "", actor=user.username)
     flash(f"Welcome back, {user.username}.", "info")
     nxt = request.form.get("next", "")
-    if nxt.startswith("/") and not nxt.startswith("//"):
+    # Browsers treat backslashes as slashes, so "/\evil.com" would escape
+    # to an external site despite passing the startswith checks. Check the
+    # raw and percent-decoded forms (%5c is an encoded backslash).
+    decoded = unquote(nxt)
+    if (nxt.startswith("/") and not nxt.startswith("//")
+            and "\\" not in nxt and "\\" not in decoded):
         return redirect(nxt)
     return redirect(url_for("main.dashboard"))
 
@@ -657,7 +674,7 @@ def set_language(code):
     unknown codes are ignored and fall back to English."""
     from app import i18n as i18n_lib
     i18n_lib.set_lang(code)
-    return redirect(request.referrer or url_for("main.dashboard"))
+    return _safe_back(url_for("main.dashboard"))
 
 
 # ---------------------------------------------------------------------------
@@ -911,7 +928,7 @@ def schedule_new_submit():
         # then every interval after that.
         next_run_at=datetime.now(timezone.utc) + timedelta(minutes=2),
         created_by=user.username if user else "admin",
-        webhook_url=(request.form.get("webhook_url", "").strip() or None),
+        webhook_url=_safe_webhook_url(request.form.get("webhook_url", "")),
     )
     db.session.add(sched)
     db.session.commit()

@@ -61,7 +61,11 @@ class Config:
     #   NETVULNX_SMTP_HOST / _PORT / _USERNAME / _PASSWORD / _FROM
     #   NETVULNX_SMTP_USE_TLS=0 to disable STARTTLS (not recommended)
     SMTP_HOST = os.environ.get("NETVULNX_SMTP_HOST", "")
-    SMTP_PORT = int(os.environ.get("NETVULNX_SMTP_PORT", "587"))
+    try:
+        SMTP_PORT = int(os.environ.get("NETVULNX_SMTP_PORT", "587"))
+    except ValueError:
+        # A non-numeric port must not crash the app at import time.
+        SMTP_PORT = 587
     SMTP_USERNAME = os.environ.get("NETVULNX_SMTP_USERNAME", "")
     SMTP_PASSWORD = os.environ.get("NETVULNX_SMTP_PASSWORD", "")
     SMTP_FROM = os.environ.get("NETVULNX_SMTP_FROM", "netvulnx@localhost")

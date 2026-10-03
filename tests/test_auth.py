@@ -123,6 +123,32 @@ def test_login_next_redirect_is_safe(app_and_client):
         assert r.headers["Location"].endswith("/")
 
 
+def test_login_next_backslash_redirect_blocked(app_and_client):
+    # Regression: "/\\evil.com" passed the old startswith checks, and
+    # browsers treat backslash as a slash — an open redirect.
+    _, client = app_and_client
+    _setup_admin(client)
+    for evil in ("/\\evil.com", "/%5cevil.com", "/\\\\evil.com"):
+        with client.application.test_client() as anon:
+            tok = _token(anon, "/login")
+            r = anon.post("/login", data={"_csrf_token": tok,
+                                          "username": "admin",
+                                          "password": "testpass123",
+                                          "next": evil})
+            assert r.status_code == 302
+            assert "evil.com" not in r.headers["Location"], evil
+
+
+def test_language_switcher_ignores_external_referrer(app_and_client):
+    # Regression: set_language used the raw Referer header; it must
+    # stay inside the app like every other back-redirect.
+    _, client = app_and_client
+    _setup_admin(client)  # setup auto-logs in the new admin
+    r = client.get("/lang/hi", headers={"Referer": "https://evil.example/"})
+    assert r.status_code == 302
+    assert "evil.example" not in r.headers["Location"]
+
+
 def test_logout_ends_session(app_and_client):
     app, client = app_and_client
     _setup_admin(client)

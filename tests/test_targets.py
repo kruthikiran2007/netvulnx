@@ -119,3 +119,41 @@ def test_too_many_ports_rejected():
 def test_1024_ports_allowed():
     ports = parse_ports("1-1024")
     assert len(ports) == 1024
+
+
+def test_ipv6_cidr_fully_inside_scope_allowed():
+    from scanner.targets import parse_target
+    t = parse_target("::1/128")
+    assert t["type"] == "cidr"
+    assert t["hosts"] == ["::1"]
+
+
+def test_ipv6_cidr_partly_outside_scope_rejected():
+    # Regression: only the first host was scope-checked, so ::/120
+    # (starts at ::1, which is allowed) let 254 out-of-scope
+    # addresses through.
+    from scanner.targets import parse_target, TargetError
+    with pytest.raises(TargetError):
+        parse_target("::/120")
+
+
+def test_ipv4_cidr_straddling_scope_rejected():
+    # 192.168.0.0/15 would spill into 192.169.x.x — must be rejected
+    # even though the first host is in scope.
+    from scanner.targets import parse_target, TargetError
+    with pytest.raises(TargetError):
+        parse_target("192.167.0.0/16")
+    # Sanity: a fully inside-scope range still works.
+    from scanner.targets import parse_target as pt
+    assert pt("192.168.1.0/24")["type"] == "cidr"
+
+
+def test_public_cidr_needs_opt_in():
+    from scanner.targets import parse_target, TargetError
+    with pytest.raises(TargetError):
+        parse_target("8.8.8.0/24")
+    t = parse_target("8.8.8.0/24", allow_public=True)
+    assert t["type"] == "cidr"
+    # ...but multicast is never allowed, even with opt-in.
+    with pytest.raises(TargetError):
+        parse_target("224.0.0.0/24", allow_public=True)
